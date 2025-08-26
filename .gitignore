@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Entornos virtuales (en cualquier subcarpeta)
+venv/
+.venv/
+ENV/
+env/
+*/venv/
+*/.venv/
+*/ENV/
+*/env/
+
+# Node
+node_modules/
+
+# Logs
+*.log
+
+# IDEs
+.vscode/
+.idea/
