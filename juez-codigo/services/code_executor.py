@@ -3,12 +3,13 @@ import tempfile
 import os
 import time
 
+gcc_flags = ['-Wall', '-Wextra', '-std=c99']
+
 def execute_c_code(code: str) -> dict:
     try: 
         start_time = time.time()
 
          # Flags por defecto
-        gcc_flags = ['-Wall', '-Wextra', '-std=c99']
 
         with tempfile.TemporaryDirectory() as temp_dir:
             source_file = os.path.join(temp_dir, "program.c")
