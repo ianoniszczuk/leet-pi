@@ -1,4 +1,4 @@
-const morgan = require('morgan');
+import morgan from 'morgan'
 
 const logger = morgan('combined', {
   skip: (req, res) => res.statusCode < 400,
@@ -9,4 +9,4 @@ const logger = morgan('combined', {
   },
 });
 
-module.exports = logger;
+export default logger;

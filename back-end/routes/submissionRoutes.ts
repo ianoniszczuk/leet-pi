@@ -1,6 +1,6 @@
-const express = require('express');
-const submissionController = require('../controllers/submissionController');
-const { validateSubmission } = require('../middleware/validation');
+import express from 'express'
+import submissionController from '../controllers/submissionController.ts'
+import { validateSubmission } from '../middleware/validation.ts'
 
 const router = express.Router();
 
@@ -18,4 +18,4 @@ router.post('/', validateSubmission, submissionController.submitSolution);
  */
 router.get('/:submissionId/status', submissionController.getSubmissionStatus);
 
-module.exports = router;
+export default router;

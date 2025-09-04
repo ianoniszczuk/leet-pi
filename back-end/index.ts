@@ -1,10 +1,10 @@
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const config = require('./config/config');
-const routes = require('./routes');
-const logger = require('./middleware/logger');
-const errorHandler = require('./middleware/errorHandler');
+import express from 'express'
+import cors from 'cors'
+import helmet from 'helmet'
+import config from './config/config.ts'
+import routes from './routes/index.ts'
+import logger from './middleware/logger.ts'
+import { errorHandler } from './middleware/errorHandler.ts'
 
 const app = express();
 
