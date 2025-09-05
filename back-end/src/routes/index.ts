@@ -1,5 +1,5 @@
-const express = require('express');
-const submissionRoutes = require('./submissionRoutes');
+import express from 'express'
+import submissionRoutes from './submissionRoutes.ts'
 
 const router = express.Router();
 
@@ -27,4 +27,4 @@ router.use('*', (req, res) => {
   });
 });
 
-module.exports = router;
+export default router;

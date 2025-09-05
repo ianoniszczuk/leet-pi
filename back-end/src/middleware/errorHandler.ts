@@ -1,4 +1,6 @@
-const errorHandler = (err, req, res, next) => {
+import type { NextFunction, Request, Response } from "express";
+
+export const errorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
   console.error('Error:', err);
 
   // Default error
@@ -26,5 +28,3 @@ const errorHandler = (err, req, res, next) => {
     },
   });
 };
-
-module.exports = errorHandler;

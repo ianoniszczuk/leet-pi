@@ -1,6 +1,7 @@
-const Joi = require('joi');
+import type { NextFunction, Request, Response } from 'express';
+import Joi from 'joi'
 
-const validateSubmission = (req, res, next) => {
+export const validateSubmission = (req: Request, res: Response, next: NextFunction) => {
   const schema = Joi.object({
     exerciseNumber: Joi.number().integer().min(1).required()
       .messages({
@@ -25,8 +26,4 @@ const validateSubmission = (req, res, next) => {
   }
 
   next();
-};
-
-module.exports = {
-  validateSubmission,
 };
