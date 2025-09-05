@@ -1,6 +1,6 @@
 import express from 'express'
-import submissionController from '../controllers/submissionController.ts'
-import { validateSubmission } from '../middleware/validation.ts'
+import submissionController from '@/controllers/submissionController.ts'
+import { validateSubmission } from '@/middleware/validation.ts'
 
 const router = express.Router();
 

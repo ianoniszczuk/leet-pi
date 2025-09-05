@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
-import codeJudgeService from '../services/codeJudgeService.ts'
+import codeJudgeService from '@/services/codeJudgeService.ts'
 
 class SubmissionController {
   async submitSolution(req: Request, res: Response, next: NextFunction) {
