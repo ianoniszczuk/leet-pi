@@ -1,32 +1,37 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
-
-export type SubmissionStatus = 'pending' | 'approved' | 'failed' | 'compilation_error';
-
-// @TODO: eliminar esta entidad, es un ejemplo de prueba para probar comandos de TypeORM
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
+import { User } from './user.entity.ts';
+import { Exercise } from './exercise.entity.ts';
 
 @Entity({ name: 'submissions' })
 export class Submission {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
+  @PrimaryColumn({ name: 'user_id', type: 'uuid' })
+  userId!: string;
 
-  @Column({ type: 'int' })
+  @PrimaryColumn({ name: 'guide_number', type: 'int' })
+  guideNumber!: number;
+
+  @PrimaryColumn({ name: 'exercise_number', type: 'int' })
   exerciseNumber!: number;
 
-  @Column({ type: 'text' })
-  code!: string;
-
-  @Column({ type: 'varchar', length: 32, default: 'pending' })
-  status!: SubmissionStatus;
-
-  @Column({ type: 'jsonb', nullable: true })
-  resultSummary!: any | null;
-
-  @CreateDateColumn({ type: 'timestamptz' })
+  @PrimaryColumn({ name: 'created_at', type: 'timestamptz', default: () => 'now()' })
   createdAt!: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz' })
-  updatedAt!: Date;
+  @Column({ name: 'code', type: 'text' })
+  code!: string;
+
+  @Column({ name: 'success', type: 'boolean' })
+  success!: boolean;
+
+  @ManyToOne(() => User, (user) => user.submissions, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'user_id', referencedColumnName: 'id' })
+  user!: User;
+
+  @ManyToOne(() => Exercise, (exercise) => exercise.submissions, { onDelete: 'CASCADE' })
+  @JoinColumn([
+    { name: 'guide_number', referencedColumnName: 'guideNumber' },
+    { name: 'exercise_number', referencedColumnName: 'exerciseNumber' },
+  ])
+  exercise!: Exercise;
 }
 
 export default Submission;
-
