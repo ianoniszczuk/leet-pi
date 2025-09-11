@@ -10,9 +10,9 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "generate-env": "node scripts/generate-env.ts",
-    "migrations:generate": "TS_NODE_PROJECT=tsconfig.migrations.json sh -c 'typeorm-ts-node-esm migration:generate -d src/database/data-source.ts src/migrations/\"$1\"' --",
-    "migrations:run": "TS_NODE_PROJECT=tsconfig.migrations.json typeorm-ts-node-esm migration:run -d src/database/data-source.ts",
-    "migrations:revert": "TS_NODE_PROJECT=tsconfig.migrations.json typeorm-ts-node-esm migration:revert -d src/database/data-source.ts"
+    "migrations:generate": "cross-env TS_NODE_PROJECT=tsconfig.migrations.json typeorm-ts-node-esm migration:generate -d src/database/data-source.ts",
+    "migrations:run": "cross-env TS_NODE_PROJECT=tsconfig.migrations.json typeorm-ts-node-esm migration:run -d src/database/data-source.ts",
+    "migrations:revert": "cross-env TS_NODE_PROJECT=tsconfig.migrations.json typeorm-ts-node-esm migration:revert -d src/database/data-source.ts"
   },
   "keywords": [
     "programming",
@@ -47,6 +47,7 @@
     "ts-node": "^10.9.2",
     "tsx": "^4.20.5",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "cross-env": "^7.0.3"
   }
 }
