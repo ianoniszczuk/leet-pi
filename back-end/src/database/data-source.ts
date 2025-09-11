@@ -13,7 +13,7 @@ const dataSourceOptions: DataSourceOptions = {
   password: process.env.DB_PASSWORD || 'postgres',
   database: process.env.DB_NAME || 'app_db',
   synchronize: false,
-  logging: false,
+  logging: Boolean(process.env.DB_LOGGING) || false,
   entities: [
     'src/entities/**/*.{ts,js}',
   ],
