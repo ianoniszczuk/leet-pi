@@ -9,7 +9,10 @@
     "dev": "nodemon",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "generate-env": "node scripts/generate-env.ts"
+    "generate-env": "node scripts/generate-env.ts",
+    "migrations:generate": "TS_NODE_PROJECT=tsconfig.migrations.json sh -c 'typeorm-ts-node-esm migration:generate -d src/database/data-source.ts src/migrations/\"$1\"' --",
+    "migrations:run": "TS_NODE_PROJECT=tsconfig.migrations.json typeorm-ts-node-esm migration:run -d src/database/data-source.ts",
+    "migrations:revert": "TS_NODE_PROJECT=tsconfig.migrations.json typeorm-ts-node-esm migration:revert -d src/database/data-source.ts"
   },
   "keywords": [
     "programming",

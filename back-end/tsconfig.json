@@ -5,6 +5,7 @@
     // "rootDir": "./src",
     // "outDir": "./dist",
     "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
     "moduleResolution": "nodenext",
     "allowImportingTsExtensions": true,
     "noEmit": true,
