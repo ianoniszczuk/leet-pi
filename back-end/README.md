@@ -4,11 +4,13 @@ Backend escalable para un MVP que permite a estudiantes subir soluciones de ejer
 
 ## 🚀 Características
 
+- **Autenticación con Auth0** para gestión segura de usuarios
 - **Arquitectura modular** con separación clara de responsabilidades
 - **Validación robusta** de entradas usando Joi
 - **Manejo centralizado de errores** con respuestas consistentes
 - **Logging estructurado** para debugging y monitoreo
 - **Seguridad** con Helmet y CORS configurado
+- **Base de datos PostgreSQL** con TypeORM
 - **Comunicación asíncrona** con el juez de código
 - **Preparado para escalar** con estructura de carpetas organizada
 
@@ -18,12 +20,14 @@ Backend escalable para un MVP que permite a estudiantes subir soluciones de ejer
 back-end/
 ├── config/           # Configuración centralizada
 ├── controllers/      # Lógica de negocio
+├── database/         # Configuración de base de datos
+├── entities/         # Entidades TypeORM
 ├── middleware/       # Middleware personalizado
-├── models/          # Modelos de datos (futuro)
+├── migrations/       # Migraciones de base de datos
 ├── routes/          # Definición de rutas
 ├── services/        # Servicios externos
 ├── utils/           # Utilidades y helpers
-├── index.js         # Punto de entrada
+├── index.ts         # Punto de entrada
 └── package.json     # Dependencias
 ```
 
@@ -36,16 +40,41 @@ back-end/
 
 2. **Configurar variables de entorno:**
    ```bash
-   # Crear archivo .env basado en config/config.js
+   # Crear archivo .env basado en config/config.ts
    PORT=3000
    NODE_ENV=development
+   
+   # Base de datos
+   DB_HOST=localhost
+   DB_PORT=5432
+   DB_USERNAME=your_username
+   DB_PASSWORD=your_password
+   DB_NAME=leet_pi_db
+   
+   # Code Judge Service
    CODE_JUDGE_URL=http://localhost:5000
    CODE_JUDGE_TIMEOUT=30000
+   
+   # CORS
    CORS_ORIGIN=http://localhost:3000
+   
+   # Logging
    LOG_LEVEL=info
+   
+   # Auth0 (ver AUTH0_SETUP.md para configuración completa)
+   AUTH0_DOMAIN=your-domain.auth0.com
+   AUTH0_AUDIENCE=your-api-identifier
+   AUTH0_ISSUER=https://your-domain.auth0.com/
+   AUTH0_JWKS_URI=https://your-domain.auth0.com/.well-known/jwks.json
    ```
 
-3. **Ejecutar el servidor:**
+3. **Configurar base de datos:**
+   ```bash
+   # Ejecutar migraciones
+   npm run migrations:run
+   ```
+
+4. **Ejecutar el servidor:**
    ```bash
    # Desarrollo
    npm run dev
@@ -61,30 +90,52 @@ back-end/
 GET /api/health
 ```
 
-### Enviar Solución
+### Autenticación (Auth0)
+```
+GET /api/users/me          # Obtener usuario actual (requiere auth)
+GET /api/users/profile      # Obtener perfil completo (requiere auth)
+GET /api/users              # Listar todos los usuarios (requiere auth)
+GET /api/users/:id          # Obtener usuario por ID (requiere auth)
+DELETE /api/users/:id       # Eliminar usuario (requiere auth)
+```
+
+### Submissions (Protegidas)
+```
+POST /api/submissions      # Enviar solución (requiere auth)
+GET /api/submissions/my     # Mis submissions (requiere auth)
+GET /api/submissions/:id    # Submission específica (requiere auth)
+```
+
+### Submissions (Públicas)
+```
+GET /api/submissions/:id/status  # Estado de submission
+```
+
+### Ejemplo de Envío de Solución (Autenticado)
 ```
 POST /api/submissions
+Authorization: Bearer <auth0-token>
 Content-Type: application/json
 
 {
   "exerciseNumber": 1,
+  "guideNumber": 1,
   "code": "#include <stdio.h>\nint main() { return 0; }"
 }
 ```
 
-### Consultar Estado
-```
-GET /api/submissions/:submissionId/status
-```
-
 ## 🔄 Flujo de Evaluación
 
-1. **Frontend envía** código y número de ejercicio
-2. **Backend valida** la entrada usando Joi
-3. **Backend envía** al juez de código via POST
-4. **Juez procesa** y ejecuta los tests
-5. **Backend recibe** resultados y los formatea
-6. **Frontend recibe** respuesta estructurada
+1. **Usuario se autentica** con Auth0
+2. **Frontend envía** código, número de ejercicio y guía con token de autorización
+3. **Backend valida** token y sincroniza usuario con Auth0
+4. **Backend valida** la entrada usando Joi
+5. **Backend verifica** que el ejercicio existe y está habilitado
+6. **Backend envía** al juez de código via POST
+7. **Juez procesa** y ejecuta los tests
+8. **Backend recibe** resultados y los formatea
+9. **Backend guarda** submission en la base de datos
+10. **Frontend recibe** respuesta estructurada
 
 ## 📊 Formato de Respuesta
 
@@ -153,10 +204,19 @@ npm run format
 |----------|-------------|---------|
 | `PORT` | Puerto del servidor | 3000 |
 | `NODE_ENV` | Entorno de ejecución | development |
+| `DB_HOST` | Host de PostgreSQL | localhost |
+| `DB_PORT` | Puerto de PostgreSQL | 5432 |
+| `DB_USERNAME` | Usuario de PostgreSQL | - |
+| `DB_PASSWORD` | Contraseña de PostgreSQL | - |
+| `DB_NAME` | Nombre de la base de datos | leet_pi_db |
 | `CODE_JUDGE_URL` | URL del juez de código | http://localhost:5000 |
 | `CODE_JUDGE_TIMEOUT` | Timeout para requests (ms) | 30000 |
 | `CORS_ORIGIN` | Origen permitido para CORS | http://localhost:3000 |
 | `LOG_LEVEL` | Nivel de logging | info |
+| `AUTH0_DOMAIN` | Dominio de Auth0 | - |
+| `AUTH0_AUDIENCE` | Identificador de API en Auth0 | - |
+| `AUTH0_ISSUER` | Issuer de Auth0 | - |
+| `AUTH0_JWKS_URI` | URI de claves públicas de Auth0 | - |
 
 ## 📝 Logs
 
@@ -166,11 +226,25 @@ El sistema genera logs estructurados para:
 - Comunicación con el juez de código
 - Errores del sistema
 
-## 🚨 id Errores
+## 🚨 Códigos de Error
 
+- **Errores de autenticación**: 401 Unauthorized
+- **Errores de autorización**: 403 Forbidden
 - **Errores de validación**: 400 Bad Request
+- **Recursos no encontrados**: 404 Not Found
 - **Errores del juez**: 503 Service Unavailable
 - **Errores internos**: 500 Internal Server Error
-- **Rutas no encontradas**: 404 Not Found
+
+## 🔐 Autenticación
+
+El sistema utiliza Auth0 para la autenticación de usuarios.
+
+### Características de Seguridad
+
+- **JWT tokens** verificados con claves públicas de Auth0
+- **Middleware de autenticación** en rutas protegidas
+- **Sincronización automática** de usuarios con Auth0
+- **Validación de audiencia e issuer** en tokens
+- **Cache de claves públicas** para mejor rendimiento
 
 

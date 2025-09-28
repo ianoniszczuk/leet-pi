@@ -17,6 +17,12 @@ const config = {
   logging: {
     level: process.env.LOG_LEVEL,
   },
+  auth0: {
+    domain: process.env.AUTH0_DOMAIN || "",
+    audience: process.env.AUTH0_AUDIENCE || "",
+    issuer: process.env.AUTH0_ISSUER || "",
+    jwksUri: process.env.AUTH0_JWKS_URI || "",
+  },
 };
 
 export default config;

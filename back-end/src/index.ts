@@ -7,6 +7,7 @@ import config from '@/config/config.ts'
 import routes from '@/routes/index.ts'
 import logger from '@/middleware/logger.ts'
 import { errorHandler } from '@/middleware/errorHandler.ts'
+import { printAuth0Config } from './utils/authTest.js'
 
 const app = express();
 
@@ -38,12 +39,16 @@ const start = async () => {
     await AppDataSource.initialize();
     console.log('📦 Database connected');
 
+    // Validar configuración de Auth0
+    printAuth0Config();
+
     const PORT = config.server.port;
     app.listen(PORT, () => {
       console.log(`🚀 Server running in ${config.server.nodeEnv} mode`);
       console.log(`📍 Server running at http://localhost:${PORT}`);
       console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
-      console.log(`📝 API docs: http://localhost:${PORT}/api/submissions`);
+      console.log(`👤 User endpoints: http://localhost:${PORT}/api/users`);
+      console.log(`📝 Submission endpoints: http://localhost:${PORT}/api/submissions`);
     });
   } catch (err) {
     console.error('❌ Failed to initialize database', err);
