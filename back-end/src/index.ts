@@ -7,7 +7,7 @@ import config from '@/config/config.ts'
 import routes from '@/routes/index.ts'
 import logger from '@/middleware/logger.ts'
 import { errorHandler } from '@/middleware/errorHandler.ts'
-import { printAuth0Config } from './utils/authTest.js'
+import { printAuth0Config } from './utils/authTest.ts'
 
 const app = express();
 
@@ -18,6 +18,7 @@ app.use(helmet());
 app.use(cors({
   origin: config.cors.origin,
   credentials: true,
+  exposedHeaders: ['X-Auth-Token', 'X-Refresh-Token'],
 }));
 
 // Logging middleware
@@ -48,6 +49,7 @@ const start = async () => {
       console.log(`📍 Server running at http://localhost:${PORT}`);
       console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
       console.log(`👤 User endpoints: http://localhost:${PORT}/api/users`);
+      console.log(`🔐 Auth endpoints: http://localhost:${PORT}/api/auth`);
       console.log(`📝 Submission endpoints: http://localhost:${PORT}/api/submissions`);
     });
   } catch (err) {
@@ -61,13 +63,13 @@ start();
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down gracefully');
-  try { await AppDataSource.destroy(); } catch {}
+  try { await AppDataSource.destroy(); } catch { }
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   console.log('SIGINT received, shutting down gracefully');
-  try { await AppDataSource.destroy(); } catch {}
+  try { await AppDataSource.destroy(); } catch { }
   process.exit(0);
 });
 

@@ -3,7 +3,7 @@
  * Este archivo puede ser eliminado después de verificar que todo funciona
  */
 
-import config from '../config/config.js';
+import config from '../config/config.ts';
 
 export function validateAuth0Config(): { isValid: boolean; errors: string[] } {
   const errors: string[] = [];

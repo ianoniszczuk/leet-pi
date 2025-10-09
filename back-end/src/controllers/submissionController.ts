@@ -1,10 +1,10 @@
 import type { Request, Response, NextFunction } from 'express';
-import codeJudgeService from '../services/codeJudgeService.js';
-import userService from '../services/userService.js';
-import AppDataSource from '../database/data-source.js';
-import { Submission } from '../entities/submission.entity.js';
-import { Exercise } from '../entities/exercise.entity.js';
-import { formatSuccessResponse, formatErrorResponse } from '../utils/responseFormatter.js';
+import codeJudgeService from '../services/codeJudgeService.ts';
+import userService from '../services/userService.ts';
+import AppDataSource from '../database/data-source.ts';
+import { Submission } from '../entities/submission.entity.ts';
+import { Exercise } from '../entities/exercise.entity.ts';
+import { formatSuccessResponse, formatErrorResponse } from '../utils/responseFormatter.ts';
 
 class SubmissionController {
   async submitSolution(req: Request, res: Response, next: NextFunction) {

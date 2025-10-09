@@ -9,6 +9,11 @@ export const API_CONFIG = {
 export const API_ENDPOINTS = {
   // Health
   health: '/health',
+
+  // Auth
+  auth: {
+    login: '/auth/login',
+  },
   
   // Users
   users: {

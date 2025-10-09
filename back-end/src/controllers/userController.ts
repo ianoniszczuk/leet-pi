@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
-import userService from '../services/userService.js';
-import { formatSuccessResponse, formatErrorResponse } from '../utils/responseFormatter.js';
+import userService from '../services/userService.ts';
+import { formatSuccessResponse, formatErrorResponse } from '../utils/responseFormatter.ts';
 
 export class UserController {
   /**

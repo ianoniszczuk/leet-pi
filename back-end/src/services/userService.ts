@@ -1,6 +1,6 @@
-import { User } from '../entities/user.entity.js';
-import type { Auth0Payload } from '../middleware/auth.js';
-import userDAO from '../persistence/user.dao.js';
+import { User } from '../entities/user.entity.ts';
+import type { Auth0Payload } from '../middleware/auth.ts';
+import userDAO from '../persistence/user.dao.ts';
 
 export class UserService {
   constructor() {

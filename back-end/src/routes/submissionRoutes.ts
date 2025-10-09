@@ -1,7 +1,7 @@
 import express from 'express'
 import submissionController from '@/controllers/submissionController.ts'
 import { validateSubmission } from '@/middleware/validation.ts'
-import { authenticateToken } from '../middleware/auth.js'
+import { authenticateAuth } from '../middleware/auth.ts'
 
 const router = express.Router();
 
@@ -10,7 +10,7 @@ const router = express.Router();
  * @desc Submit a new solution for evaluation
  * @access Private (requires authentication)
  */
-router.post('/', authenticateToken, validateSubmission, submissionController.submitSolution);
+router.post('/', authenticateAuth, validateSubmission, submissionController.submitSolution);
 
 /**
  * @route GET /api/submissions/:submissionId/status
@@ -24,13 +24,13 @@ router.get('/:submissionId/status', submissionController.getSubmissionStatus);
  * @desc Get all submissions for the authenticated user
  * @access Private (requires authentication)
  */
-router.get('/my', authenticateToken, submissionController.getUserSubmissions);
+router.get('/my', authenticateAuth, submissionController.getUserSubmissions);
 
 /**
  * @route GET /api/submissions/:submissionId
  * @desc Get a specific submission by ID for the authenticated user
  * @access Private (requires authentication)
  */
-router.get('/:submissionId', authenticateToken, submissionController.getSubmissionById);
+router.get('/:submissionId', authenticateAuth, submissionController.getSubmissionById);
 
 export default router;

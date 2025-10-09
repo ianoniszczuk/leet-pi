@@ -2,26 +2,137 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { API_CONFIG, API_ENDPOINTS } from '@/config/api';
+import apiService from '@/services/api';
 
 export default function Callback() {
   const navigate = useNavigate();
-  const { error } = useAuth0();
+  const {
+    error,
+    isLoading,
+    getAccessTokenSilently,
+    logout,
+  } = useAuth0();
 
   useEffect(() => {
+    let cancelled = false;
+
+    const redirectHome = (message?: string, forceLogout = false) => {
+      apiService.clearAuthTokens();
+      if (message) {
+        sessionStorage.setItem('auth_error', message);
+      } else {
+        sessionStorage.removeItem('auth_error');
+      }
+      if (forceLogout) {
+        logout({
+          logoutParams: {
+            returnTo: window.location.origin,
+          },
+          federated: true,
+        });
+        return;
+      }
+      if (!cancelled) {
+        navigate('/', { replace: true });
+      }
+    };
+
     if (error) {
       console.error('Auth0 Error:', error);
-      navigate('/');
-      return;
+      redirectHome(error.message, true);
+      return () => {
+        cancelled = true;
+      };
     }
 
-    // Auth0 maneja automáticamente el callback
-    // Redirigir a la página principal después de un breve delay
-    const timer = setTimeout(() => {
-      navigate('/');
-    }, 1000);
+    if (isLoading) {
+      return () => {
+        cancelled = true;
+      };
+    }
 
-    return () => clearTimeout(timer);
-  }, [navigate, error]);
+    const handleToken = async () => {
+      try {
+        const auth0Token = await getAccessTokenSilently();
+
+        const response = await fetch(
+          `${API_CONFIG.baseURL}${API_ENDPOINTS.auth.login}`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${auth0Token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          let errorMessage = `API responded with status ${response.status}`;
+
+          try {
+            const errorBody = await response.json();
+            errorMessage = errorBody?.error?.message ?? errorMessage;
+          } catch {
+            // Ignore JSON parsing errors for non-JSON responses
+          }
+
+          if (response.status === 401 || response.status === 403) {
+            console.warn('Acceso denegado para el usuario actual:', errorMessage);
+            redirectHome(errorMessage, true);
+            return;
+          }
+
+          throw new Error(errorMessage);
+        }
+
+        const data = await response.json();
+
+        if (!data?.success) {
+          throw new Error('API login failed');
+        }
+
+        const authToken = response.headers.get('x-auth-token');
+        const refreshToken = response.headers.get('x-refresh-token');
+
+        if (!authToken || !refreshToken) {
+          console.error('Missing authentication tokens in response headers');
+          redirectHome('No se pudo completar la autenticación');
+          return;
+        }
+
+        apiService.setAuthTokens(authToken, refreshToken);
+
+        if (!cancelled) {
+          navigate('/');
+        }
+      } catch (tokenExchangeError) {
+        console.error('Error durante el intercambio de tokens:', tokenExchangeError);
+
+        const message =
+          tokenExchangeError instanceof Error
+            ? tokenExchangeError.message
+            : 'Error during token exchange';
+
+        const isAuth0Error =
+          tokenExchangeError instanceof Error &&
+          typeof (tokenExchangeError as any).error === 'string';
+
+        redirectHome(message, isAuth0Error);
+      }
+    };
+
+    handleToken();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    error,
+    isLoading,
+    getAccessTokenSilently,
+    logout,
+    navigate,
+  ]);
 
   if (error) {
     return (

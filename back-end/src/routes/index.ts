@@ -1,6 +1,7 @@
 import express from 'express'
 import submissionRoutes from './submissionRoutes.ts'
 import userRoutes from './userRoutes.ts'
+import authRoutes from './authRoutes.ts'
 
 const router = express.Router();
 
@@ -15,6 +16,7 @@ router.get('/health', (req, res) => {
 });
 
 // API routes
+router.use('/auth', authRoutes);
 router.use('/submissions', submissionRoutes);
 router.use('/users', userRoutes);
 

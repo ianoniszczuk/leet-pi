@@ -1,6 +1,6 @@
 import { Repository } from 'typeorm';
-import AppDataSource from '../database/data-source.js';
-import { User } from '../entities/user.entity.js';
+import AppDataSource from '../database/data-source.ts';
+import { User } from '../entities/user.entity.ts';
 
 /**
  * Data Access Object para la entidad User

@@ -1,6 +1,9 @@
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import { API_CONFIG, API_ENDPOINTS } from '@/config/api';
 import type { ApiResponse, User, UserProfile, Submission, SubmissionResponse, SubmissionForm } from '@/types';
+
+const AUTH_TOKEN_KEY = 'auth_token';
+const REFRESH_TOKEN_KEY = 'refresh_token';
 
 class ApiService {
   private api: AxiosInstance;
@@ -15,10 +18,23 @@ class ApiService {
     // Request interceptor para agregar token de autenticación
     this.api.interceptors.request.use(
       (config) => {
-        const token = localStorage.getItem('auth0_token');
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
+        const url = config.url ?? '';
+        const isAuthLogin = url.includes(API_ENDPOINTS.auth.login);
+
+        if (!isAuthLogin) {
+          config.headers = config.headers ?? {};
+          const authToken = localStorage.getItem(AUTH_TOKEN_KEY);
+          const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+
+          if (authToken) {
+            config.headers['X-Auth-Token'] = authToken;
+          }
+
+          if (refreshToken) {
+            config.headers['X-Refresh-Token'] = refreshToken;
+          }
         }
+
         return config;
       },
       (error) => Promise.reject(error)
@@ -26,12 +42,22 @@ class ApiService {
 
     // Response interceptor para manejar errores globalmente
     this.api.interceptors.response.use(
-      (response) => response,
+      (response) => {
+        const newAuthToken = response.headers['x-auth-token'];
+        const newRefreshToken = response.headers['x-refresh-token'];
+
+        if (newAuthToken && newRefreshToken) {
+          this.setAuthTokens(newAuthToken, newRefreshToken);
+        }
+
+        return response;
+      },
       (error) => {
         if (error.response?.status === 401) {
           // Token expirado o inválido
-          localStorage.removeItem('auth0_token');
-          window.location.href = '/login';
+          localStorage.removeItem(AUTH_TOKEN_KEY);
+          localStorage.removeItem(REFRESH_TOKEN_KEY);
+          window.location.href = '/';
         }
         return Promise.reject(error);
       }
@@ -91,14 +117,16 @@ class ApiService {
     return response.data;
   }
 
-  // Utility method to set auth token
-  setAuthToken(token: string): void {
-    localStorage.setItem('auth0_token', token);
+  // Utility method to set auth tokens
+  setAuthTokens(authToken: string, refreshToken: string): void {
+    localStorage.setItem(AUTH_TOKEN_KEY, authToken);
+    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
   }
 
-  // Utility method to clear auth token
-  clearAuthToken(): void {
-    localStorage.removeItem('auth0_token');
+  // Utility method to clear auth tokens
+  clearAuthTokens(): void {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
   }
 }
 

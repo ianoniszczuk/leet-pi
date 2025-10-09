@@ -23,6 +23,14 @@ const config = {
     issuer: process.env.AUTH0_ISSUER || "",
     jwksUri: process.env.AUTH0_JWKS_URI || "",
   },
+  jwt: {
+    accessSecret: process.env.API_JWT_SECRET || "",
+    refreshSecret: process.env.API_REFRESH_SECRET || "",
+    issuer: process.env.API_JWT_ISSUER || "leetpi-api",
+    audience: process.env.API_JWT_AUDIENCE || "leetpi-clients",
+    accessExpiresIn: process.env.API_JWT_ACCESS_EXPIRES_IN || "7d",
+    refreshExpiresIn: process.env.API_JWT_REFRESH_EXPIRES_IN || "30d",
+  },
 };
 
 export default config;

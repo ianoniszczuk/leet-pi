@@ -1,7 +1,7 @@
 import { useAuth0 } from '@auth0/auth0-react';
 import { useEffect } from 'react';
 import { apiService } from '@/services/api';
-import type { Auth0User, User } from '@/types';
+import type { Auth0User } from '@/types';
 
 export const useAuth = () => {
   const {
@@ -10,27 +10,15 @@ export const useAuth = () => {
     isLoading,
     loginWithRedirect,
     logout,
-    getAccessTokenSilently,
     error: auth0Error,
   } = useAuth0();
 
-  // Actualizar token en el servicio de API cuando cambie
+  // Limpiar tokens cuando el usuario no está autenticado
   useEffect(() => {
-    const updateToken = async () => {
-      if (isAuthenticated) {
-        try {
-          const token = await getAccessTokenSilently();
-          apiService.setAuthToken(token);
-        } catch (error) {
-          console.error('Error getting access token:', error);
-        }
-      } else {
-        apiService.clearAuthToken();
-      }
-    };
-
-    updateToken();
-  }, [isAuthenticated, getAccessTokenSilently]);
+    if (!isAuthenticated) {
+      apiService.clearAuthTokens();
+    }
+  }, [isAuthenticated]);
 
   const login = () => {
     loginWithRedirect({
@@ -41,7 +29,7 @@ export const useAuth = () => {
   };
 
   const handleLogout = () => {
-    apiService.clearAuthToken();
+    apiService.clearAuthTokens();
     logout({
       logoutParams: {
         returnTo: window.location.origin,
