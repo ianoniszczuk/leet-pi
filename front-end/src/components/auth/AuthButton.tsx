@@ -23,13 +23,14 @@ export default function AuthButton({
       <button
         onClick={login}
         className={`
-          flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors duration-200
+          flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
           ${variant === 'minimal' 
             ? 'text-gray-700 hover:text-primary-600 hover:bg-gray-100' 
-            : 'bg-primary-600 hover:bg-primary-700 text-white'
+            : 'bg-primary-600 hover:bg-primary-700 text-white shadow-lg hover:shadow-xl'
           }
           ${className}
         `}
+        aria-label="Iniciar sesión con cuenta institucional"
       >
         <LogIn className="w-4 h-4" />
         Iniciar Sesión

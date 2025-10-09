@@ -1,7 +1,7 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import Header from '@/components/layout/Header'
-import Home from '@/pages/Home'
+import Landing from '@/pages/Landing'
 import Callback from '@/pages/Callback'
 import SubmitCode from '@/pages/SubmitCode'
 import MySubmissions from '@/pages/MySubmissions'
@@ -9,7 +9,7 @@ import UserProfile from '@/pages/UserProfile'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
 function App() {
-  const { isLoading } = useAuth()
+  const { isLoading, isAuthenticated } = useAuth()
 
   if (isLoading) {
     return (
@@ -24,17 +24,39 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
-      
-      <main className="flex-1">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/callback" element={<Callback />} />
-          <Route path="/submit" element={<SubmitCode />} />
-          <Route path="/submissions" element={<MySubmissions />} />
-          <Route path="/profile" element={<UserProfile />} />
-        </Routes>
-      </main>
+      <Routes>
+        {/* Landing page - only show header if authenticated */}
+        <Route path="/" element={
+          <>
+            {isAuthenticated && <Header />}
+            <Landing />
+          </>
+        } />
+        <Route path="/callback" element={<Callback />} />
+        
+        {/* Protected routes with header */}
+        <Route path="/submit" element={
+          <>
+            <Header />
+            <SubmitCode />
+          </>
+        } />
+        <Route path="/submissions" element={
+          <>
+            <Header />
+            <MySubmissions />
+          </>
+        } />
+        <Route path="/profile" element={
+          <>
+            <Header />
+            <UserProfile />
+          </>
+        } />
+        
+        {/* Redirect authenticated users from landing to submit */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </div>
   )
 }
