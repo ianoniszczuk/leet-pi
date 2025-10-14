@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Code2, AlertCircle, CheckCircle, Play, Clock, HardDrive, TestTube, Terminal } from 'lucide-react';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { useSubmission } from '@/hooks/useApi';
-import type { SubmissionResponse } from '@/types';
+import { useSubmission, useAvailableExercises } from '@/hooks/useApi';
+import type { SubmissionResponse, GuideWithExercises } from '@/types';
 
 export default function SubmitCode() {
   const [formData, setFormData] = useState({
@@ -19,6 +19,7 @@ int main() {
   const [result, setResult] = useState<SubmissionResponse | null>(null);
   const [showResults, setShowResults] = useState(false);
   const { submitSolution, loading, error } = useSubmission();
+  const { data: availableExercises, loading: exercisesLoading, error: exercisesError } = useAvailableExercises();
 
   // Load saved code from localStorage on component mount
   useEffect(() => {
@@ -27,6 +28,20 @@ int main() {
       setFormData(prev => ({ ...prev, code: savedCode }));
     }
   }, []);
+
+  // Update form data when available exercises are loaded
+  useEffect(() => {
+    if (availableExercises && availableExercises.length > 0) {
+      const firstGuide = availableExercises[0];
+      const firstExercise = firstGuide.exercises[0];
+      
+      setFormData(prev => ({
+        ...prev,
+        guideNumber: firstGuide.guideNumber,
+        exerciseNumber: firstExercise.exerciseNumber,
+      }));
+    }
+  }, [availableExercises]);
 
   // Save code to localStorage whenever it changes
   useEffect(() => {
@@ -51,11 +66,24 @@ int main() {
   };
 
   const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value,
-    }));
+    setFormData(prev => {
+      const newData = { ...prev, [field]: value };
+      
+      // If guideNumber changes, reset exerciseNumber to first available exercise
+      if (field === 'guideNumber' && availableExercises) {
+        const selectedGuide = availableExercises.find(g => g.guideNumber === value);
+        if (selectedGuide && selectedGuide.exercises.length > 0) {
+          newData.exerciseNumber = selectedGuide.exercises[0].exerciseNumber;
+        }
+      }
+      
+      return newData;
+    });
   };
+
+  // Get current guide's exercises
+  const currentGuide = availableExercises?.find(g => g.guideNumber === formData.guideNumber);
+  const currentExercises = currentGuide?.exercises || [];
 
   // Keyboard shortcut for submit (Ctrl+Enter)
   useEffect(() => {
@@ -92,6 +120,15 @@ int main() {
           {/* Sophisticated Selectors */}
           <div className="max-w-4xl mx-auto mb-8">
             <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+              {exercisesError && (
+                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5 text-red-600" />
+                    <span className="text-red-700 font-medium">Error al cargar ejercicios</span>
+                  </div>
+                  <p className="text-red-600 text-sm mt-1">{exercisesError}</p>
+                </div>
+              )}
               <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
                 <div className="flex items-center gap-3">
                   <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
@@ -102,11 +139,20 @@ int main() {
                     id="guideNumber"
                     value={formData.guideNumber}
                     onChange={(e) => handleInputChange('guideNumber', parseInt(e.target.value))}
-                    className="px-4 py-2 border-2 border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white"
+                    disabled={exercisesLoading}
+                    className="px-4 py-2 border-2 border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
                   >
-                    {Array.from({ length: 10 }, (_, i) => i + 1).map(num => (
-                      <option key={num} value={num}>Guía {num}</option>
-                    ))}
+                    {exercisesLoading ? (
+                      <option>Cargando guías...</option>
+                    ) : availableExercises && availableExercises.length > 0 ? (
+                      availableExercises.map(guide => (
+                        <option key={guide.guideNumber} value={guide.guideNumber}>
+                          Guía {guide.guideNumber} ({guide.exercises.length} ejercicios)
+                        </option>
+                      ))
+                    ) : (
+                      <option>No hay guías disponibles</option>
+                    )}
                   </select>
                 </div>
                 
@@ -119,11 +165,20 @@ int main() {
                     id="exerciseNumber"
                     value={formData.exerciseNumber}
                     onChange={(e) => handleInputChange('exerciseNumber', parseInt(e.target.value))}
-                    className="px-4 py-2 border-2 border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white"
+                    disabled={exercisesLoading || currentExercises.length === 0}
+                    className="px-4 py-2 border-2 border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
                   >
-                    {Array.from({ length: 20 }, (_, i) => i + 1).map(num => (
-                      <option key={num} value={num}>Ejercicio {num}</option>
-                    ))}
+                    {exercisesLoading ? (
+                      <option>Cargando ejercicios...</option>
+                    ) : currentExercises.length > 0 ? (
+                      currentExercises.map(exercise => (
+                        <option key={exercise.exerciseNumber} value={exercise.exerciseNumber}>
+                          Ejercicio {exercise.exerciseNumber}
+                        </option>
+                      ))
+                    ) : (
+                      <option>No hay ejercicios disponibles</option>
+                    )}
                   </select>
                 </div>
 
@@ -433,34 +488,25 @@ function ResultsPanel({ result, error, loading }: { result: SubmissionResponse |
                   </span>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-white p-4 rounded-lg border">
-                    <h5 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
-                      <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                      Entrada
-                    </h5>
-                    <div className="font-mono text-sm bg-gray-50 p-3 rounded border">
-                      {test.input}
-                    </div>
-                  </div>
-                  <div className="bg-white p-4 rounded-lg border">
-                    <h5 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
-                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                      Esperado
-                    </h5>
-                    <div className="font-mono text-sm bg-gray-50 p-3 rounded border">
-                      {test.expectedOutput}
-                    </div>
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="bg-white p-4 rounded-lg border">
                     <h5 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
                       <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
-                      Obtenido
+                      Tiempo de Ejecución
+                    </h5>
+                    <div className="font-mono text-sm bg-gray-50 p-3 rounded border">
+                      {test.executionTime || 'N/A'}
+                    </div>
+                  </div>
+                  <div className="bg-white p-4 rounded-lg border">
+                    <h5 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
+                      <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                      Error
                     </h5>
                     <div className={`font-mono text-sm p-3 rounded border ${
-                      test.passed ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                      test.error ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700'
                     }`}>
-                      {test.actualOutput}
+                      {test.error || 'Sin errores'}
                     </div>
                   </div>
                 </div>

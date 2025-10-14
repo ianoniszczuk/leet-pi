@@ -59,18 +59,16 @@ export interface SubmissionResponse {
   failedTests: number;
   compilationError?: string | null;
   testResults: TestResult[];
-  executionTime: string;
-  memoryUsage: string;
+  executionTime: string | null;
+  memoryUsage: string | null;
   timestamp: string;
 }
 
 export interface TestResult {
   testNumber: number;
-  input: string;
-  expectedOutput: string;
-  actualOutput: string;
   passed: boolean;
   executionTime?: string;
+  error?: string | null;
 }
 
 // Exercise Types
@@ -92,6 +90,18 @@ export interface SubmissionForm {
   exerciseNumber: number;
   guideNumber: number;
   code: string;
+}
+
+// Available Exercises Types
+export interface AvailableExercise {
+  exerciseNumber: number;
+  enabled: boolean;
+}
+
+export interface GuideWithExercises {
+  guideNumber: number;
+  enabled: boolean;
+  exercises: AvailableExercise[];
 }
 
 // Component Props Types

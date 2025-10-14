@@ -30,5 +30,6 @@ export const API_ENDPOINTS = {
     my: '/submissions/my',
     byId: (id: string) => `/submissions/${id}`,
     status: (id: string) => `/submissions/${id}/status`,
+    availableExercises: '/submissions/exercises/available',
   },
 } as const;

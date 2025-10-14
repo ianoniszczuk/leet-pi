@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiService } from '@/services/api';
-import type { ApiResponse } from '@/types';
+import type { ApiResponse, GuideWithExercises } from '@/types';
 
 interface UseApiState<T> {
   data: T | null;
@@ -102,4 +102,12 @@ export function useSubmission() {
     loading,
     error,
   };
+}
+
+// Hook específico para obtener ejercicios disponibles
+export function useAvailableExercises() {
+  return useApi<GuideWithExercises[]>(
+    () => apiService.getAvailableExercises(),
+    []
+  );
 }
