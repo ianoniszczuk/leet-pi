@@ -4,6 +4,7 @@ import userService from '../services/userService.ts';
 import AppDataSource from '../database/data-source.ts';
 import { Submission } from '../entities/submission.entity.ts';
 import { Exercise } from '../entities/exercise.entity.ts';
+import { Guide } from '../entities/guide.entity.ts';
 import { formatSuccessResponse, formatErrorResponse } from '../utils/responseFormatter.ts';
 
 class SubmissionController {
@@ -43,7 +44,7 @@ class SubmissionController {
       }
 
       // Submit to code judge
-      const result = await codeJudgeService.submitSolution(exerciseNumber, code);
+      const result = await codeJudgeService.submitSolution(guideNumber, exerciseNumber, code);
 
       // Process and format the response
       const response = this.formatEvaluationResponse(result);
@@ -171,18 +172,53 @@ class SubmissionController {
     }
   }
 
-  formatEvaluationResponse(result: any) { // @TOOD: corregir tipo
+  async getAvailableExercises(req: Request, res: Response, next: NextFunction) {
+    try {
+      const exerciseRepository = AppDataSource.getRepository(Exercise);
+      const guideRepository = AppDataSource.getRepository(Guide);
+
+      // Get all enabled guides
+      const guides = await guideRepository.find({
+        where: { enabled: true },
+        order: { guideNumber: 'ASC' },
+      });
+
+      // Get all enabled exercises grouped by guide
+      const exercises = await exerciseRepository.find({
+        where: { enabled: true },
+        order: { guideNumber: 'ASC', exerciseNumber: 'ASC' },
+      });
+
+      // Group exercises by guide
+      const guidesWithExercises = guides.map(guide => ({
+        guideNumber: guide.guideNumber,
+        enabled: guide.enabled,
+        exercises: exercises
+          .filter(exercise => exercise.guideNumber === guide.guideNumber)
+          .map(exercise => ({
+            exerciseNumber: exercise.exerciseNumber,
+            enabled: exercise.enabled,
+          }))
+          .sort((a, b) => a.exerciseNumber - b.exerciseNumber),
+      }));
+
+      res.status(200).json(formatSuccessResponse(guidesWithExercises, 'Available exercises retrieved successfully'));
+
+    } catch (error) {
+      console.error('Error getting available exercises:', error);
+      next(error);
+    }
+  }
+
+  formatEvaluationResponse(result: any) { // @TODO: corregir tipo
     const { submissionId, results } = result;
 
-    // Extract key information from code judge response
+    // Extract key information from new code judge response format
     const {
       status,
+      compilation,
+      execution,
       score,
-      totalTests,
-      passedTests,
-      failedTests,
-      compilationError,
-      testResults,
       executionTime,
       memoryUsage,
     } = results;
@@ -191,17 +227,23 @@ class SubmissionController {
     let overallStatus = 'pending';
     let message = 'Evaluation in progress';
 
-    if (compilationError) {
+    if (compilation && !compilation.success) {
       overallStatus = 'compilation_error';
       message = 'Code failed to compile';
-    } else if (status === 'completed') {
-      if (passedTests === totalTests) {
+    } else if (status === 'completed' && execution) {
+      if (execution.passedTests === execution.totalTests) {
         overallStatus = 'approved';
         message = 'All tests passed successfully';
       } else {
         overallStatus = 'failed';
-        message = `Failed ${failedTests} out of ${totalTests} tests`;
+        message = `Failed ${execution.failedTests} out of ${execution.totalTests} tests`;
       }
+    } else if (status === 'timeout') {
+      overallStatus = 'failed';
+      message = 'Execution timeout';
+    } else if (status === 'error') {
+      overallStatus = 'failed';
+      message = 'Execution error';
     }
 
     return {
@@ -209,11 +251,11 @@ class SubmissionController {
       overallStatus,
       message,
       score: score || 0,
-      totalTests: totalTests || 0,
-      passedTests: passedTests || 0,
-      failedTests: failedTests || 0,
-      compilationError: compilationError || null,
-      testResults: testResults || [],
+      totalTests: execution?.totalTests || 0,
+      passedTests: execution?.passedTests || 0,
+      failedTests: execution?.failedTests || 0,
+      compilationError: compilation?.errors || null,
+      testResults: execution?.testResults || [],
       executionTime: executionTime || null,
       memoryUsage: memoryUsage || null,
       timestamp: new Date().toISOString(),

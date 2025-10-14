@@ -15,19 +15,22 @@ class CodeJudgeService {
     });
   }
 
-  async submitSolution(exerciseNumber: number, code: string) {
+  async submitSolution(guideNumber: number, exerciseNumber: number, code: string) {
     try {
       const submissionId = uuidv4();
 
       const payload = {
         submissionId,
+        guideNumber,
         exerciseNumber,
         code,
         language: 'c',
+        timeout: 5000,
+        memoryLimit: 256,
         timestamp: new Date().toISOString(),
       };
 
-      console.log(`Submitting solution for exercise ${exerciseNumber} with ID: ${submissionId}`);
+      console.log(`Submitting solution for guide ${guideNumber}, exercise ${exerciseNumber} with ID: ${submissionId}`);
 
       const response = await this.client.post('/evaluate', payload);
 

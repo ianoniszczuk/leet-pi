@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
 import { API_CONFIG, API_ENDPOINTS } from '@/config/api';
-import type { ApiResponse, User, UserProfile, Submission, SubmissionResponse, SubmissionForm } from '@/types';
+import type { ApiResponse, User, UserProfile, Submission, SubmissionResponse, SubmissionForm, GuideWithExercises } from '@/types';
 
 const AUTH_TOKEN_KEY = 'auth_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
@@ -114,6 +114,11 @@ class ApiService {
 
   async getSubmissionStatus(id: string): Promise<ApiResponse<SubmissionResponse>> {
     const response = await this.api.get(API_ENDPOINTS.submissions.status(id));
+    return response.data;
+  }
+
+  async getAvailableExercises(): Promise<ApiResponse<GuideWithExercises[]>> {
+    const response = await this.api.get(API_ENDPOINTS.submissions.availableExercises);
     return response.data;
   }
 

@@ -33,4 +33,11 @@ router.get('/my', authenticateAuth, submissionController.getUserSubmissions);
  */
 router.get('/:submissionId', authenticateAuth, submissionController.getSubmissionById);
 
+/**
+ * @route GET /api/submissions/exercises/available
+ * @desc Get all available guides and exercises for submission
+ * @access Public
+ */
+router.get('/exercises/available', submissionController.getAvailableExercises);
+
 export default router;

@@ -10,6 +10,13 @@ export const validateSubmission = (req: Request, res: Response, next: NextFuncti
         'number.min': 'Exercise number must be at least 1',
         'any.required': 'Exercise number is required',
       }),
+    guideNumber: Joi.number().integer().min(1).required()
+      .messages({
+        'number.base': 'Guide number must be a number',
+        'number.integer': 'Guide number must be an integer',
+        'number.min': 'Guide number must be at least 1',
+        'any.required': 'Guide number is required',
+      }),
     code: Joi.string().min(1).max(10000).required()
       .messages({
         'string.empty': 'Code cannot be empty',
