@@ -4,6 +4,7 @@ import jwksClient from 'jwks-rsa';
 import config from '../config/config.ts';
 import jwtService from '../services/jwtService.ts';
 import type { InternalTokenPayload } from '../services/jwtService.ts';
+import userService from '@/services/userService.ts';
 import { log } from 'console';
 
 // JWKS client para obtener las claves públicas de Auth0
@@ -70,7 +71,7 @@ export const authenticateAuth0 = (req: Request, res: Response, next: NextFunctio
     audience: config.auth0.audience,
     issuer: config.auth0.issuer,
     algorithms: ['RS256'],
-  }, (err, decoded) => {
+  }, async (err, decoded) => {
     if (err) {
       return res.status(403).json({
         success: false,
@@ -82,7 +83,7 @@ export const authenticateAuth0 = (req: Request, res: Response, next: NextFunctio
     }
 
     // Agregar el usuario decodificado al request
-    req.user = decoded as Auth0Payload;
+    req.user = await userService.syncFromAuth0(decoded as Auth0Payload);
     next();
   });
 };

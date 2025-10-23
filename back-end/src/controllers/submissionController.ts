@@ -47,7 +47,55 @@ class SubmissionController {
       const result = await codeJudgeService.submitSolution(guideNumber, exerciseNumber, code);
 
       // Process and format the response
-      const response = this.formatEvaluationResponse(result);
+      const { submissionId, results } = result;
+
+      // Extract key information from new code judge response format
+      const {
+        status,
+        compilation,
+        execution,
+        score,
+        executionTime,
+        memoryUsage,
+      } = results;
+
+      // Determine overall status
+      let overallStatus = 'pending';
+      let message = 'Evaluation in progress';
+
+      if (compilation && !compilation.success) {
+        overallStatus = 'compilation_error';
+        message = 'Code failed to compile';
+      } else if (status === 'completed' && execution) {
+        if (execution.passedTests === execution.totalTests) {
+          overallStatus = 'approved';
+          message = 'All tests passed successfully';
+        } else {
+          overallStatus = 'failed';
+          message = `Failed ${execution.failedTests} out of ${execution.totalTests} tests`;
+        }
+      } else if (status === 'timeout') {
+        overallStatus = 'failed';
+        message = 'Execution timeout';
+      } else if (status === 'error') {
+        overallStatus = 'failed';
+        message = 'Execution error';
+      }
+
+      const response = {
+        submissionId,
+        overallStatus,
+        message,
+        score: score || 0,
+        totalTests: execution?.totalTests || 0,
+        passedTests: execution?.passedTests || 0,
+        failedTests: execution?.failedTests || 0,
+        compilationError: compilation?.errors || null,
+        testResults: execution?.testResults || [],
+        executionTime: executionTime || null,
+        memoryUsage: memoryUsage || null,
+        timestamp: new Date().toISOString(),
+      };
 
       // Guardar submission en la base de datos
       const submissionRepository = AppDataSource.getRepository(Submission);

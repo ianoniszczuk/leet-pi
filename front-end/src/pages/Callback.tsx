@@ -129,9 +129,7 @@ export default function Callback() {
   }, [
     error,
     isLoading,
-    getAccessTokenSilently,
-    logout,
-    navigate,
+
   ]);
 
   if (error) {

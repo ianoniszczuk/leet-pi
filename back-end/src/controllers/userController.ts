@@ -41,7 +41,7 @@ export class UserController {
 
       // Buscar usuario existente
       let user = await userService.findBySub(req.user.sub);
-      
+
       if (!user) {
         // Si no existe, crear desde Auth0
         user = await userService.syncFromAuth0(req.user);
@@ -65,7 +65,7 @@ export class UserController {
   async getAllUsers(req: Request, res: Response): Promise<void> {
     try {
       const users = await userService.findAll();
-      
+
       const usersData = users.map(user => ({
         id: user.id,
         email: user.email,
@@ -87,9 +87,9 @@ export class UserController {
   async getUserById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      
+
       const user = await userService.findById(id);
-      
+
       if (!user) {
         res.status(404).json(formatErrorResponse('User not found', 404));
         return;
@@ -114,9 +114,9 @@ export class UserController {
   async deleteUser(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      
+
       const deleted = await userService.deleteById(id);
-      
+
       if (!deleted) {
         res.status(404).json(formatErrorResponse('User not found', 404));
         return;
