@@ -57,11 +57,13 @@ int main() {
     
     try {
       setShowResults(true);
+      setResult(null); // Limpiar resultado anterior
       const response = await submitSolution(formData);
       setResult(response);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting code:', error);
       setShowResults(true);
+      // El error ya está manejado por el hook useSubmission
     }
   };
 
@@ -283,20 +285,41 @@ function ResultsPanel({ result, error, loading }: { result: SubmissionResponse |
   }
 
   if (error && !result) {
+    const isAuthError = error.includes('Sesión expirada') || error.includes('Authentication');
+    
     return (
       <div className="p-6">
-        <div className="bg-red-50 border-2 border-red-200 rounded-xl p-6">
+        <div className={`border-2 rounded-xl p-6 ${
+          isAuthError 
+            ? 'bg-orange-50 border-orange-200' 
+            : 'bg-red-50 border-red-200'
+        }`}>
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-              <AlertCircle className="w-5 h-5 text-red-600" />
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+              isAuthError ? 'bg-orange-100' : 'bg-red-100'
+            }`}>
+              <AlertCircle className={`w-5 h-5 ${isAuthError ? 'text-orange-600' : 'text-red-600'}`} />
             </div>
             <div>
-              <p className="text-red-700 font-semibold text-lg">Error al enviar</p>
-              <p className="text-red-600 text-sm">Ocurrió un problema al procesar tu código</p>
+              <p className={`font-semibold text-lg ${isAuthError ? 'text-orange-700' : 'text-red-700'}`}>
+                {isAuthError ? 'Problema de Autenticación' : 'Error al enviar'}
+              </p>
+              <p className={`text-sm ${isAuthError ? 'text-orange-600' : 'text-red-600'}`}>
+                {isAuthError ? 'Tu sesión ha expirado' : 'Ocurrió un problema al procesar tu código'}
+              </p>
             </div>
           </div>
-          <div className="bg-red-100 p-3 rounded-lg">
-            <p className="text-red-700 font-mono text-sm">{error}</p>
+          <div className={`p-3 rounded-lg ${
+            isAuthError ? 'bg-orange-100' : 'bg-red-100'
+          }`}>
+            <p className={`font-mono text-sm ${isAuthError ? 'text-orange-700' : 'text-red-700'}`}>
+              {error}
+            </p>
+            {isAuthError && (
+              <p className="text-orange-600 text-sm mt-2">
+                Serás redirigido automáticamente al inicio de sesión...
+              </p>
+            )}
           </div>
         </div>
       </div>

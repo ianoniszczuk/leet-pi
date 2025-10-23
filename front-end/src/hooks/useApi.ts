@@ -89,7 +89,21 @@ export function useSubmission() {
         throw new Error(errorMessage);
       }
     } catch (error: any) {
-      const errorMessage = error.response?.data?.error?.message || error.message || 'Error de conexión';
+      let errorMessage = 'Error de conexión';
+      
+      if (error.response?.status === 401) {
+        errorMessage = 'Sesión expirada. Por favor, inicia sesión nuevamente.';
+        // Limpiar tokens y redirigir al login
+        apiService.clearAuthTokens();
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 2000);
+      } else if (error.response?.data?.error?.message) {
+        errorMessage = error.response.data.error.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       setError(errorMessage);
       throw error;
     } finally {

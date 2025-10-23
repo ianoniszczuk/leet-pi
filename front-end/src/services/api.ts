@@ -57,7 +57,8 @@ class ApiService {
           // Token expirado o inválido
           localStorage.removeItem(AUTH_TOKEN_KEY);
           localStorage.removeItem(REFRESH_TOKEN_KEY);
-          window.location.href = '/';
+          // No redirigir automáticamente, dejar que el componente maneje el error
+          console.warn('Authentication token expired or invalid');
         }
         return Promise.reject(error);
       }

@@ -83,7 +83,7 @@ export const authenticateAuth0 = (req: Request, res: Response, next: NextFunctio
     }
 
     // Agregar el usuario decodificado al request
-    req.user = await userService.syncFromAuth0(decoded as Auth0Payload);
+    req.user = decoded as Auth0Payload;
     next();
   });
 };
