@@ -8,8 +8,8 @@ const config = {
     nodeEnv: process.env.NODE_ENV,
   },
   codeJudge: {
-    url: process.env.CODE_JUDGE_URL || "",
-    timeout: parseInt(process.env.CODE_JUDGE_TIMEOUT || ""),
+    url: process.env.CODE_JUDGE_URL || "http://localhost:5000",
+    timeout: parseInt(process.env.CODE_JUDGE_TIMEOUT || "30000"),
   },
   cors: {
     origin: process.env.CORS_ORIGIN,

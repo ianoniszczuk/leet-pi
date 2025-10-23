@@ -54,15 +54,8 @@ class CodeJudgeService {
     }
   }
 
-  async getSubmissionStatus(submissionId: number) {
-    try {
-      const response = await this.client.get(`/status/${submissionId}`);
-      return response.data;
-    } catch (error: any) {
-      console.error('Error getting submission status:', error.message);
-      throw new Error('Failed to get submission status');
-    }
-  }
+  // Note: The new judge service is stateless and doesn't support status polling
+  // Each evaluation is completed synchronously in the /evaluate endpoint
 }
 
 export default new CodeJudgeService();

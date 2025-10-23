@@ -20,3 +20,7 @@ app.include_router(execute.router)
 @app.get("/")
 def read_root():
     return {"mensaje": "HOLA!"}
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}

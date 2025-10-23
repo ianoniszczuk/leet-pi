@@ -41,7 +41,7 @@ back-end/
 2. **Configurar variables de entorno:**
    ```bash
    # Crear archivo .env basado en config/config.ts
-   PORT=3000
+   PORT=3001
    NODE_ENV=development
    
    # Base de datos
