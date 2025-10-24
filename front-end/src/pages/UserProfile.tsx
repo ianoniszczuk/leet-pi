@@ -1,8 +1,7 @@
 import { User, Mail, Calendar, Award, FileText, CheckCircle, XCircle } from 'lucide-react';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
-import { useApi } from '@/hooks/useApi';
-import { apiService } from '@/services/api';
+import { useCachedUserProfile, useCachedMySubmissions } from '@/hooks/useCachedApi';
 import type { UserProfile, Submission } from '@/types';
 
 export default function UserProfile() {
@@ -12,12 +11,12 @@ export default function UserProfile() {
     data: userProfile,
     loading: profileLoading,
     error: profileError,
-  } = useApi<UserProfile>(() => apiService.getUserProfile(), []);
+  } = useCachedUserProfile();
 
   const {
     data: submissions,
     loading: submissionsLoading,
-  } = useApi<Submission[]>(() => apiService.getMySubmissions(), []);
+  } = useCachedMySubmissions();
 
   if (profileLoading) {
     return (

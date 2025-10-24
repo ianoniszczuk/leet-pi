@@ -1,6 +1,7 @@
 import { useAuth0 } from '@auth0/auth0-react';
 import { useEffect } from 'react';
 import { apiService } from '@/services/api';
+import { cacheService } from '@/services/cacheService';
 import type { Auth0User } from '@/types';
 
 export const useAuth = () => {
@@ -14,11 +15,12 @@ export const useAuth = () => {
   } = useAuth0();
 
   // Limpiar tokens cuando el usuario no está autenticado
+  // Solo limpiar cuando Auth0 ha terminado de cargar para evitar perder tokens en refresh
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isLoading && !isAuthenticated) {
       apiService.clearAuthTokens();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isLoading]);
 
   const login = () => {
     loginWithRedirect({
@@ -29,7 +31,12 @@ export const useAuth = () => {
   };
 
   const handleLogout = () => {
+    // Limpiar tokens de autenticación
     apiService.clearAuthTokens();
+    
+    // Limpiar todo el caché por seguridad
+    cacheService.invalidateAll();
+    
     logout({
       logoutParams: {
         returnTo: window.location.origin,

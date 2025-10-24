@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { FileText, Eye, Calendar, CheckCircle, XCircle, Clock } from 'lucide-react';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { useApi } from '@/hooks/useApi';
-import { apiService } from '@/services/api';
+import { useCachedMySubmissions } from '@/hooks/useCachedApi';
 import type { Submission } from '@/types';
 
 export default function MySubmissions() {
@@ -14,7 +13,7 @@ export default function MySubmissions() {
     loading,
     error,
     refetch,
-  } = useApi<Submission[]>(() => apiService.getMySubmissions(), []);
+  } = useCachedMySubmissions();
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('es-ES', {

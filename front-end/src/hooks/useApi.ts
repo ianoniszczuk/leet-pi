@@ -93,11 +93,8 @@ export function useSubmission() {
       
       if (error.response?.status === 401) {
         errorMessage = 'Sesión expirada. Por favor, inicia sesión nuevamente.';
-        // Limpiar tokens y redirigir al login
+        // Limpiar tokens pero no redirigir automáticamente
         apiService.clearAuthTokens();
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 2000);
       } else if (error.response?.data?.error?.message) {
         errorMessage = error.response.data.error.message;
       } else if (error.message) {

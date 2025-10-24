@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Code2, AlertCircle, CheckCircle, Play, Clock, HardDrive, TestTube, Terminal } from 'lucide-react';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { useSubmission, useAvailableExercises } from '@/hooks/useApi';
-import type { SubmissionResponse, GuideWithExercises } from '@/types';
+import SessionExpiredModal from '@/components/ui/SessionExpiredModal';
+import { useSubmission } from '@/hooks/useApi';
+import { useCachedAvailableExercises } from '@/hooks/useCachedApi';
+import type { SubmissionResponse } from '@/types';
 
 export default function SubmitCode() {
   const [formData, setFormData] = useState({
@@ -18,8 +20,9 @@ int main() {
   });
   const [result, setResult] = useState<SubmissionResponse | null>(null);
   const [showResults, setShowResults] = useState(false);
+  const [showSessionExpiredModal, setShowSessionExpiredModal] = useState(false);
   const { submitSolution, loading, error } = useSubmission();
-  const { data: availableExercises, loading: exercisesLoading, error: exercisesError } = useAvailableExercises();
+  const { data: availableExercises, loading: exercisesLoading, error: exercisesError } = useCachedAvailableExercises();
 
   // Load saved code from localStorage on component mount
   useEffect(() => {
@@ -47,6 +50,13 @@ int main() {
   useEffect(() => {
     localStorage.setItem('leet-pi-saved-code', formData.code);
   }, [formData.code]);
+
+  // Detectar errores de sesión expirada
+  useEffect(() => {
+    if (error && error.includes('Sesión expirada')) {
+      setShowSessionExpiredModal(true);
+    }
+  }, [error]);
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -107,6 +117,10 @@ int main() {
 
   return (
     <ProtectedRoute>
+      <SessionExpiredModal 
+        isOpen={showSessionExpiredModal}
+        onClose={() => setShowSessionExpiredModal(false)}
+      />
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header Section */}
@@ -317,7 +331,7 @@ function ResultsPanel({ result, error, loading }: { result: SubmissionResponse |
             </p>
             {isAuthError && (
               <p className="text-orange-600 text-sm mt-2">
-                Serás redirigido automáticamente al inicio de sesión...
+                Haz clic en "Iniciar Sesión" para continuar.
               </p>
             )}
           </div>

@@ -1,5 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { API_CONFIG, API_ENDPOINTS } from '@/config/api';
+import { cacheService } from './cacheService';
+import { CACHE_KEYS } from '@/config/cache';
 import type { ApiResponse, User, UserProfile, Submission, SubmissionResponse, SubmissionForm, GuideWithExercises } from '@/types';
 
 const AUTH_TOKEN_KEY = 'auth_token';
@@ -100,6 +102,12 @@ class ApiService {
   // Submission endpoints
   async submitSolution(formData: SubmissionForm): Promise<ApiResponse<SubmissionResponse>> {
     const response = await this.api.post(API_ENDPOINTS.submissions.submit, formData);
+    
+    // Invalidar caché relacionado después de submit exitoso
+    if (response.data.success) {
+      this.invalidateUserCache();
+    }
+    
     return response.data;
   }
 
@@ -133,6 +141,21 @@ class ApiService {
   clearAuthTokens(): void {
     localStorage.removeItem(AUTH_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
+  }
+
+  // Cache management methods
+  invalidateUserCache(): void {
+    // Invalidar caché de submissions y profile después de submit
+    cacheService.invalidate(CACHE_KEYS.mySubmissions());
+    cacheService.invalidate(CACHE_KEYS.userProfile());
+  }
+
+  invalidateAllCache(): void {
+    cacheService.invalidateAll();
+  }
+
+  invalidateCacheByKey(key: string): void {
+    cacheService.invalidate(key);
   }
 }
 
