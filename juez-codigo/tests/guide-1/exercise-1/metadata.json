@@ -1,6 +1,0 @@
-{
-  "timeout": 5000,
-  "memoryLimit": 256,
-  "description": "Simple program that reads a number and outputs double",
-  "totalTests": 2
-}

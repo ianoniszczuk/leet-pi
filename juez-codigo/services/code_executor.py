@@ -1,44 +1,79 @@
-import subprocess
 import os
+import subprocess
 import time
-import glob
-import json
+import logging
 from datetime import datetime
-from typing import Dict, List, Tuple
 from models.schemas import EvaluationRequest, EvaluationResponse, CompilationResult, ExecutionResult, TestResult
+
+_SERVICE_DIR = os.path.dirname(os.path.abspath(__file__))
+_PROJECT_ROOT = os.path.abspath(os.path.join(_SERVICE_DIR, ".."))
+_REPO_ROOT = os.path.abspath(os.path.join(_PROJECT_ROOT, ".."))
+_PROJECT_TESTS_PATH = os.path.join(_PROJECT_ROOT, "tests")
+_ENV_TESTS_PATH = os.environ.get("TESTS_BASE_PATH")
+_TESTS_SEARCH_PATHS = [
+    path for path in (
+        _ENV_TESTS_PATH,
+        "/tests",
+        _PROJECT_TESTS_PATH,
+    ) if path
+]
+_ENV_SUBMISSIONS_PATH = os.environ.get("SUBMISSIONS_BASE_PATH")
+_SUBMISSIONS_SEARCH_PATHS = [
+    path for path in (
+        _ENV_SUBMISSIONS_PATH,
+        os.path.join(_PROJECT_ROOT, "submissions"),
+        os.path.join(_REPO_ROOT, "submissions"),
+    ) if path
+]
+_TMP_SUBMISSIONS_PATH = "/tmp/submissions"
+logger = logging.getLogger(__name__)
 
 def execute_evaluation(request: EvaluationRequest) -> EvaluationResponse:
     """Execute code evaluation with test cases"""
     start_time = time.time()
     submission_id = request.submissionId
+    submission_paths = _build_submission_paths(submission_id)
+    source_file = submission_paths["tmp_source"]
+    exe_file = submission_paths["tmp_executable"]
     
     try:
         # Create submissions directory if it doesn't exist
-        os.makedirs("/tmp/submissions", exist_ok=True)
+        os.makedirs(_TMP_SUBMISSIONS_PATH, exist_ok=True)
         
         # Save source code
-        source_file = f"/tmp/submissions/{submission_id}.c"
-        exe_file = f"/tmp/submissions/{submission_id}"
-        
         with open(source_file, 'w') as f:
             f.write(request.code)
         
+        # Resolve test harness path
+        test_file = _get_test_file_path(request)
+        if not os.path.exists(test_file):
+            compilation_result = CompilationResult(
+                success=False,
+                errors=f"Test harness not found for guide {request.guideNumber}, "
+                       f"exercise {request.exerciseNumber}"
+            )
+            return _create_error_response(
+                request,
+                "error",
+                compilation_result,
+                ExecutionResult(totalTests=0, passedTests=0, failedTests=0, testResults=[]),
+                0,
+                f"{time.time() - start_time:.3f}s"
+            )
+        
         # Compile code
-        compilation_result = _compile_code(source_file, exe_file)
+        compilation_result = _compile_code(source_file, exe_file, test_file)
         
         if not compilation_result.success:
             return _create_error_response(request, "error", compilation_result, 
                                         ExecutionResult(totalTests=0, passedTests=0, failedTests=0, testResults=[]),
                                         0, f"{time.time() - start_time:.3f}s")
         
-        # Load and execute test cases
+        # Execute test harness
         execution_result = _execute_test_cases(exe_file, request)
         
         # Calculate score
         score = round((execution_result.passedTests / execution_result.totalTests) * 100) if execution_result.totalTests > 0 else 0
-        
-        # Clean up files
-        _cleanup_files(source_file, exe_file)
         
         return EvaluationResponse(
             submissionId=request.submissionId,
@@ -52,19 +87,31 @@ def execute_evaluation(request: EvaluationRequest) -> EvaluationResponse:
         )
         
     except Exception as e:
-        _cleanup_files(f"/tmp/submissions/{submission_id}.c", f"/tmp/submissions/{submission_id}")
         return _create_error_response(request, "error", 
                                     CompilationResult(success=False, errors=str(e)),
                                     ExecutionResult(totalTests=0, passedTests=0, failedTests=0, testResults=[]),
                                     0, f"{time.time() - start_time:.3f}s")
+    finally:
+        _cleanup_files(
+            submission_paths["tmp_source"],
+            submission_paths["tmp_executable"],
+            *submission_paths["workspace_sources"]
+        )
 
-def _compile_code(source_file: str, exe_file: str) -> CompilationResult:
-    """Compile C code with gcc"""
+def _compile_code(source_file: str, exe_file: str, test_file: str) -> CompilationResult:
+    """Compile user code linked with the exercise test harness"""
     compile_command = [
-        'gcc', '-o', exe_file, source_file, 
-        '-lm', '-std=c99', '-Wall', '-Wextra'
+        'gcc',
+        '-std=c99',
+        '-Wall',
+        '-Wextra',
+        source_file,
+        test_file,
+        '-lm',
+        '-o',
+        exe_file
     ]
-    
+
     try:
         compile_result = subprocess.run(
             compile_command,
@@ -84,34 +131,19 @@ def _compile_code(source_file: str, exe_file: str) -> CompilationResult:
         return CompilationResult(success=False, errors=str(e))
 
 def _execute_test_cases(exe_file: str, request: EvaluationRequest) -> ExecutionResult:
-    """Execute all test cases for the exercise"""
-    test_dir = f"/tests/guide-{request.guideNumber}/exercise-{request.exerciseNumber}"
-    
-    # Find all test input files
-    test_input_files = glob.glob(f"{test_dir}/test-*.in")
-    test_input_files.sort()  # Ensure consistent ordering
-    
-    if not test_input_files:
-        return ExecutionResult(totalTests=0, passedTests=0, failedTests=0, testResults=[])
-    
+    """Execute the compiled test harness for the exercise"""
     test_results = []
     passed_tests = 0
     failed_tests = 0
-    
-    for test_input_file in test_input_files:
-        test_number = _extract_test_number(test_input_file)
-        test_output_file = test_input_file.replace('.in', '.out')
-        
-        # Execute single test
-        test_result = _execute_single_test(exe_file, test_input_file, test_output_file, 
-                                         test_number, request.timeout)
-        test_results.append(test_result)
-        
-        if test_result.passed:
-            passed_tests += 1
-        else:
-            failed_tests += 1
-    
+
+    test_result = _execute_single_test(exe_file, request.timeout)
+    test_results.append(test_result)
+
+    if test_result.passed:
+        passed_tests += 1
+    else:
+        failed_tests += 1
+
     return ExecutionResult(
         totalTests=len(test_results),
         passedTests=passed_tests,
@@ -119,59 +151,44 @@ def _execute_test_cases(exe_file: str, request: EvaluationRequest) -> ExecutionR
         testResults=test_results
     )
 
-def _execute_single_test(exe_file: str, input_file: str, output_file: str, 
-                        test_number: int, timeout_ms: int) -> TestResult:
-    """Execute a single test case"""
+def _execute_single_test(exe_file: str, timeout_ms: int) -> TestResult:
+    """Execute the compiled program once and report the result"""
     test_start = time.time()
     
     try:
-        # Read expected output
-        with open(output_file, 'r') as f:
-            expected_output = f.read().strip()
-        
-        # Execute program with test input
-        with open(input_file, 'r') as f:
-            run_result = subprocess.run(
-                [exe_file],
-                stdin=f,
-                capture_output=True,
-                text=True,
-                timeout=timeout_ms / 1000.0  # Convert to seconds
-            )
+        run_result = subprocess.run(
+            [exe_file],
+            capture_output=True,
+            text=True,
+            timeout=timeout_ms / 1000.0  # Convert to seconds
+        )
         
         execution_time = time.time() - test_start
-        
-        # Check if execution was successful
-        if run_result.returncode != 0:
+
+        if run_result.returncode == 0:
             return TestResult(
-                testNumber=test_number,
-                passed=False,
-                executionTime=f"{execution_time:.3f}s",
-                error="Runtime Error"
-            )
-        
-        # Compare outputs
-        actual_output = run_result.stdout.strip()
-        
-        if actual_output == expected_output:
-            return TestResult(
-                testNumber=test_number,
+                testNumber=1,
                 passed=True,
                 executionTime=f"{execution_time:.3f}s",
                 error=None
             )
-        else:
-            return TestResult(
-                testNumber=test_number,
-                passed=False,
-                executionTime=f"{execution_time:.3f}s",
-                error="Wrong Answer"
-            )
+
+        error_details = _build_error_message(
+            run_result.returncode,
+            run_result.stdout,
+            run_result.stderr
+        )
+        return TestResult(
+            testNumber=1,
+            passed=False,
+            executionTime=f"{execution_time:.3f}s",
+            error=error_details
+        )
             
     except subprocess.TimeoutExpired:
         execution_time = time.time() - test_start
         return TestResult(
-            testNumber=test_number,
+            testNumber=1,
             passed=False,
             executionTime=f"{execution_time:.3f}s",
             error="Timeout"
@@ -179,19 +196,62 @@ def _execute_single_test(exe_file: str, input_file: str, output_file: str,
     except Exception as e:
         execution_time = time.time() - test_start
         return TestResult(
-            testNumber=test_number,
+            testNumber=1,
             passed=False,
             executionTime=f"{execution_time:.3f}s",
-            error="Runtime Error"
+            error=str(e)
         )
 
-def _extract_test_number(test_file: str) -> int:
-    """Extract test number from filename like test-1.in"""
-    filename = os.path.basename(test_file)
-    try:
-        return int(filename.split('-')[1].split('.')[0])
-    except:
-        return 1
+def _build_error_message(return_code: int, stdout: str, stderr: str) -> str:
+    """Build a concise error message from process output"""
+    stderr = (stderr or "").strip()
+    stdout = (stdout or "").strip()
+    base_message = f"Process exited with code {return_code}"
+    
+    if stderr and stdout:
+        return f"{base_message}. stderr: {stderr}. stdout: {stdout}"
+    if stderr:
+        return f"{base_message}. stderr: {stderr}"
+    if stdout:
+        return f"{base_message}. stdout: {stdout}"
+    return base_message
+
+def _get_test_file_path(request: EvaluationRequest) -> str:
+    """Resolve the absolute path to the C test harness for the requested exercise"""
+    guide_dir = f"guide-{request.guideNumber}"
+    exercise_file = f"exercise-{request.exerciseNumber}.c"
+    for base_path in _TESTS_SEARCH_PATHS:
+        candidate = os.path.join(base_path, guide_dir, exercise_file)
+        if os.path.exists(candidate):
+            return candidate
+    # Fall back to first configured base path so upper logic can report a clear error
+    return os.path.join(_TESTS_SEARCH_PATHS[0], guide_dir, exercise_file)
+
+def _build_submission_paths(submission_id: str) -> dict:
+    """Prepare the different file locations used during evaluation."""
+    workspace_sources = [
+        _resolve_submission_path(base_path, submission_id)
+        for base_path in _SUBMISSIONS_SEARCH_PATHS
+    ]
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_workspace_sources = []
+    for path in workspace_sources:
+        if path not in seen:
+            unique_workspace_sources.append(path)
+            seen.add(path)
+    return {
+        "workspace_sources": unique_workspace_sources,
+        "tmp_source": os.path.join(_TMP_SUBMISSIONS_PATH, f"{submission_id}.c"),
+        "tmp_executable": os.path.join(_TMP_SUBMISSIONS_PATH, submission_id),
+    }
+
+def _resolve_submission_path(base_path: str, submission_id: str) -> str:
+    """Resolve the absolute file path for a submission within the given base directory."""
+    # If base_path is relative, resolve it from the repo root to keep consistency
+    if not os.path.isabs(base_path):
+        base_path = os.path.abspath(os.path.join(_REPO_ROOT, base_path))
+    return os.path.join(base_path, f"{submission_id}.c")
 
 def _cleanup_files(*files):
     """Clean up temporary files"""
