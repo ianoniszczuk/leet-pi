@@ -19,12 +19,24 @@ export const errorHandler = (err: any, req: Request, res: Response, next: NextFu
     message = 'Code judge service unavailable';
   }
 
+  // Multer file upload errors
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    statusCode = 400;
+    message = 'File size exceeds limit';
+  }
+
+  if (err.message === 'Only CSV files are allowed') {
+    statusCode = 400;
+    message = err.message;
+  }
+
   res.status(statusCode).json({
     success: false,
     error: {
       message,
       statusCode,
       timestamp: new Date().toISOString(),
+      ...(err.details && { details: err.details }),
     },
   });
 };

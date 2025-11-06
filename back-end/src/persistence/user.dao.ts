@@ -200,6 +200,69 @@ export class UserDAO {
       .limit(limit)
       .getMany();
   }
+
+  /**
+   * Actualiza el estado enabled de un usuario por email
+   * @param email - Email del usuario
+   * @param enabled - Estado enabled a establecer
+   * @returns Promise<User | null>
+   */
+  async updateEnabledByEmail(email: string, enabled: boolean): Promise<User | null> {
+    const user = await this.findByEmail(email);
+    if (!user) {
+      return null;
+    }
+    user.enabled = enabled;
+    return await this.repository.save(user);
+  }
+
+  /**
+   * Busca un usuario por email o lo crea si no existe
+   * @param email - Email del usuario
+   * @param defaults - Valores por defecto para crear el usuario
+   * @returns Promise<User>
+   */
+  async findByEmailOrCreate(email: string, defaults: Partial<User>): Promise<User> {
+    let user = await this.findByEmail(email);
+    if (!user) {
+      const userData: Partial<User> = {
+        email: email.toLowerCase().trim(),
+        ...defaults,
+      };
+      // sub puede ser null para usuarios creados desde CSV (se actualizará en el primer login)
+      if (!userData.sub) {
+        userData.sub = null;
+      }
+      // Si no se proporcionan nombres, usar valores por defecto
+      if (!userData.firstName) {
+        userData.firstName = '';
+      }
+      if (!userData.lastName) {
+        userData.lastName = '';
+      }
+      user = await this.create(userData);
+    }
+    return user;
+  }
+
+  /**
+   * Actualiza el estado enabled de múltiples usuarios por email
+   * @param emails - Array de emails
+   * @param enabled - Estado enabled a establecer
+   * @returns Promise<number> - Número de usuarios actualizados
+   */
+  async bulkUpdateEnabled(emails: string[], enabled: boolean): Promise<number> {
+    if (emails.length === 0) {
+      return 0;
+    }
+    const result = await this.repository
+      .createQueryBuilder()
+      .update(User)
+      .set({ enabled })
+      .where('email IN (:...emails)', { emails: emails.map(e => e.toLowerCase().trim()) })
+      .execute();
+    return result.affected || 0;
+  }
 }
 
 // Instancia singleton del DAO

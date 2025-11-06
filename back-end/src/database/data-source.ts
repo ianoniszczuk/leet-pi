@@ -2,6 +2,10 @@ import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import dotenv from 'dotenv';
 import type { DataSourceOptions } from 'typeorm/browser';
+import { InitialSchema1757623551991 } from '../migrations/1757623551991-initial-schema.ts';
+import { UserRolesDeadlineEnabledSession1762463659656 } from '../migrations/1762463659656-user-roles-deadline-enabled-session.ts';
+import { ChangeEnabledDefaultToFalse1762464439246 } from '../migrations/1762464439246-change-enabled-default-to-false.ts';
+import { MakeSubNullable1762464552974 } from '../migrations/1762464552974-make-sub-nullable.ts';
 
 dotenv.config();
 
@@ -18,7 +22,10 @@ const dataSourceOptions: DataSourceOptions = {
     'src/entities/**/*.{ts,js}',
   ],
   migrations: [
-    'src/migrations/**/*.{ts,js}',
+    InitialSchema1757623551991,
+    UserRolesDeadlineEnabledSession1762463659656,
+    ChangeEnabledDefaultToFalse1762464439246,
+    MakeSubNullable1762464552974,
   ],
 }
 

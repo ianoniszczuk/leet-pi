@@ -30,6 +30,7 @@ export class UserService {
       email: payload.email,
       firstName: payload.given_name || payload.name?.split(' ')[0] || '',
       lastName: payload.family_name || payload.name?.split(' ').slice(1).join(' ') || '',
+      enabled: false, // Por defecto, los nuevos usuarios no están habilitados
     };
 
     return await userDAO.create(userData);
@@ -134,6 +135,71 @@ export class UserService {
    */
   async existsBySub(sub: string): Promise<boolean> {
     return await userDAO.existsBySub(sub);
+  }
+
+  /**
+   * Sincroniza o crea un usuario desde Auth0 con verificación de enabled
+   * Si el usuario no está habilitado, lanza un error
+   */
+  async syncFromAuth0WithEnabledCheck(payload: Auth0Payload): Promise<User> {
+    let user = await this.findBySub(payload.sub);
+
+    if (!user) {
+      // Si no existe por sub, buscar por email (podría ser un usuario creado desde CSV)
+      user = await this.findByEmail(payload.email);
+      
+      if (user) {
+        // Usuario existe pero sin sub (creado desde CSV), actualizar con sub de Auth0
+        const updatedUser = await userDAO.update(user.id, {
+          sub: payload.sub,
+          email: payload.email,
+          firstName: payload.given_name || payload.name?.split(' ')[0] || '',
+          lastName: payload.family_name || payload.name?.split(' ').slice(1).join(' ') || '',
+        });
+        user = updatedUser || user;
+      } else {
+        // Si no existe, crear nuevo usuario con enabled = false
+        user = await this.createFromAuth0(payload);
+      }
+    } else {
+      // Si existe, actualizar información si es necesario
+      const needsUpdate = 
+        user.email !== payload.email ||
+        user.firstName !== (payload.given_name || payload.name?.split(' ')[0] || '') ||
+        user.lastName !== (payload.family_name || payload.name?.split(' ').slice(1).join(' ') || '');
+
+      if (needsUpdate) {
+        const updatedUser = await userDAO.update(user.id, {
+          email: payload.email,
+          firstName: payload.given_name || payload.name?.split(' ')[0] || '',
+          lastName: payload.family_name || payload.name?.split(' ').slice(1).join(' ') || '',
+        });
+        user = updatedUser || user;
+      }
+    }
+
+    // Verificar si el usuario está habilitado
+    if (!user.enabled) {
+      const error: any = new Error('Usuario no habilitado para acceder a la plataforma');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    return user;
+  }
+
+  /**
+   * Actualiza el estado enabled de un usuario por email
+   */
+  async updateEnabledStatus(email: string, enabled: boolean): Promise<User | null> {
+    return await userDAO.updateEnabledByEmail(email, enabled);
+  }
+
+  /**
+   * Actualiza el estado enabled de múltiples usuarios
+   */
+  async bulkUpdateEnabledStatus(emails: string[], enabled: boolean): Promise<number> {
+    return await userDAO.bulkUpdateEnabled(emails, enabled);
   }
 }
 

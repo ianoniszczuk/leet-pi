@@ -2,6 +2,7 @@ import express from 'express'
 import submissionRoutes from './submissionRoutes.ts'
 import userRoutes from './userRoutes.ts'
 import authRoutes from './authRoutes.ts'
+import adminRoutes from './adminRoutes.ts'
 
 const router = express.Router();
 
@@ -19,6 +20,7 @@ router.get('/health', (req, res) => {
 router.use('/auth', authRoutes);
 router.use('/submissions', submissionRoutes);
 router.use('/users', userRoutes);
+router.use('/admin', adminRoutes);
 
 // 404 handler for undefined routes
 router.use('*', (req, res) => {

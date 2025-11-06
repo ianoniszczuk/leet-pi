@@ -6,8 +6,8 @@ export class User {
   @PrimaryGeneratedColumn('uuid', { name: 'id' })
   id!: string;
 
-  @Column({ name: 'sub', type: 'varchar', length: 255, unique: true, nullable: false })
-  sub!: string;
+  @Column({ name: 'sub', type: 'varchar', length: 255, unique: true, nullable: true })
+  sub!: string | null;
 
   @Column({ name: 'email', type: 'varchar', length: 50, unique: true, nullable: false })
   email!: string;
@@ -18,7 +18,7 @@ export class User {
   @Column({ name: 'last_name', type: 'varchar', length: 100, nullable: false })
   lastName!: string;
 
-  @Column({ name: 'enabled', type: 'boolean', default: true })
+  @Column({ name: 'enabled', type: 'boolean', default: false })
   enabled!: boolean;
 
   @OneToMany(() => Submission, (submission) => submission.user)
