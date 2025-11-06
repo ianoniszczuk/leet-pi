@@ -28,18 +28,22 @@ class SubmissionController {
       // Sincronizar usuario con Auth0
       const user = await userService.syncFromAuth0(req.user);
 
-      // Verificar que el ejercicio existe y está habilitado
+      // Verificar que el ejercicio existe, está habilitado y no venció el deadline de su guía
       const exerciseRepository = AppDataSource.getRepository(Exercise);
-      const exercise = await exerciseRepository.findOne({
-        where: {
-          exerciseNumber,
-          guideNumber,
-          enabled: true,
-        },
-      });
+      const now = new Date();
+
+      const exercise = await exerciseRepository
+        .createQueryBuilder('exercise')
+        .innerJoinAndSelect('exercise.guide', 'guide')
+        .where('exercise.exerciseNumber = :exerciseNumber', { exerciseNumber })
+        .andWhere('exercise.guideNumber = :guideNumber', { guideNumber })
+        .andWhere('exercise.enabled = :exerciseEnabled', { exerciseEnabled: true })
+        .andWhere('guide.enabled = :guideEnabled', { guideEnabled: true })
+        .andWhere('(guide.deadline IS NULL OR guide.deadline >= :now)', { now })
+        .getOne();
 
       if (!exercise) {
-        res.status(404).json(formatErrorResponse('Exercise not found or not enabled', 404));
+        res.status(404).json(formatErrorResponse('Exercise not found, not enabled, or past deadline', 404));
         return;
       }
 
@@ -222,32 +226,30 @@ class SubmissionController {
 
   async getAvailableExercises(req: Request, res: Response, next: NextFunction) {
     try {
-      const exerciseRepository = AppDataSource.getRepository(Exercise);
       const guideRepository = AppDataSource.getRepository(Guide);
+      const now = new Date();
 
-      // Get all enabled guides
-      const guides = await guideRepository.find({
-        where: { enabled: true },
-        order: { guideNumber: 'ASC' },
-      });
+      const guides = await guideRepository
+        .createQueryBuilder('guide')
+        .leftJoinAndSelect(
+          'guide.exercises',
+          'exercise',
+          'exercise.enabled = :exerciseEnabled',
+          { exerciseEnabled: true },
+        )
+        .where('guide.enabled = :guideEnabled', { guideEnabled: true })
+        .andWhere('(guide.deadline IS NULL OR guide.deadline >= :now)', { now })
+        .orderBy('guide.guideNumber', 'ASC')
+        .addOrderBy('exercise.exerciseNumber', 'ASC')
+        .getMany();
 
-      // Get all enabled exercises grouped by guide
-      const exercises = await exerciseRepository.find({
-        where: { enabled: true },
-        order: { guideNumber: 'ASC', exerciseNumber: 'ASC' },
-      });
-
-      // Group exercises by guide
-      const guidesWithExercises = guides.map(guide => ({
+      const guidesWithExercises = guides.map((guide) => ({
         guideNumber: guide.guideNumber,
         enabled: guide.enabled,
-        exercises: exercises
-          .filter(exercise => exercise.guideNumber === guide.guideNumber)
-          .map(exercise => ({
-            exerciseNumber: exercise.exerciseNumber,
-            enabled: exercise.enabled,
-          }))
-          .sort((a, b) => a.exerciseNumber - b.exerciseNumber),
+        exercises: (guide.exercises ?? []).map((exercise) => ({
+          exerciseNumber: exercise.exerciseNumber,
+          enabled: exercise.enabled,
+        })),
       }));
 
       res.status(200).json(formatSuccessResponse(guidesWithExercises, 'Available exercises retrieved successfully'));

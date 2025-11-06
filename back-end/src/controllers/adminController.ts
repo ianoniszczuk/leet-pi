@@ -6,6 +6,8 @@ import userDAO from '../persistence/user.dao.ts';
 import AppDataSource from '../database/data-source.ts';
 import { UserRoles } from '../entities/user-roles.entity.ts';
 import { Roles } from '../entities/roles.enum.ts';
+import { Guide } from '../entities/guide.entity.ts';
+import { Exercise } from '../entities/exercise.entity.ts';
 
 export class AdminController {
   /**
@@ -171,6 +173,125 @@ export class AdminController {
       }, 'User roles updated successfully'));
     } catch (error) {
       console.error('Error updating user roles:', error);
+      res.status(500).json(formatErrorResponse('Internal server error', 500));
+    }
+  }
+
+  /**
+   * Actualiza el estado habilitado y/o deadline de una guía
+   */
+  async updateGuide(req: Request, res: Response): Promise<void> {
+    const { guideNumber } = req.params;
+    const { enabled, deadline } = req.body ?? {};
+
+    const parsedGuideNumber = Number(guideNumber);
+
+    if (!Number.isInteger(parsedGuideNumber) || parsedGuideNumber <= 0) {
+      res.status(400).json(formatErrorResponse('Guide number must be a positive integer', 400));
+      return;
+    }
+
+    if (enabled === undefined && deadline === undefined) {
+      res.status(400).json(formatErrorResponse('At least one of enabled or deadline must be provided', 400));
+      return;
+    }
+
+    if (enabled !== undefined && typeof enabled !== 'boolean') {
+      res.status(400).json(formatErrorResponse('Enabled must be a boolean value', 400));
+      return;
+    }
+
+    let parsedDeadline: Date | undefined;
+    if (deadline !== undefined) {
+      const deadlineDate = new Date(deadline);
+      if (Number.isNaN(deadlineDate.valueOf())) {
+        res.status(400).json(formatErrorResponse('Deadline must be a valid date', 400));
+        return;
+      }
+      parsedDeadline = deadlineDate;
+    }
+
+    try {
+      const guideRepository = AppDataSource.getRepository(Guide);
+      const guide = await guideRepository.findOne({
+        where: { guideNumber: parsedGuideNumber },
+      });
+
+      if (!guide) {
+        res.status(404).json(formatErrorResponse('Guide not found', 404));
+        return;
+      }
+
+      if (enabled !== undefined) {
+        guide.enabled = enabled;
+      }
+
+      if (parsedDeadline) {
+        guide.deadline = parsedDeadline;
+      }
+
+      const savedGuide = await guideRepository.save(guide);
+
+      res.status(200).json(formatSuccessResponse({
+        guideNumber: savedGuide.guideNumber,
+        enabled: savedGuide.enabled,
+        deadline: savedGuide.deadline,
+      }, 'Guide updated successfully'));
+    } catch (error) {
+      console.error('Error updating guide:', error);
+      res.status(500).json(formatErrorResponse('Internal server error', 500));
+    }
+  }
+
+  /**
+   * Actualiza el estado habilitado de un ejercicio específico
+   */
+  async updateExercise(req: Request, res: Response): Promise<void> {
+    const { guideNumber, exerciseNumber } = req.params;
+    const { enabled } = req.body ?? {};
+
+    const parsedGuideNumber = Number(guideNumber);
+    const parsedExerciseNumber = Number(exerciseNumber);
+
+    if (!Number.isInteger(parsedGuideNumber) || parsedGuideNumber <= 0) {
+      res.status(400).json(formatErrorResponse('Guide number must be a positive integer', 400));
+      return;
+    }
+
+    if (!Number.isInteger(parsedExerciseNumber) || parsedExerciseNumber <= 0) {
+      res.status(400).json(formatErrorResponse('Exercise number must be a positive integer', 400));
+      return;
+    }
+
+    if (typeof enabled !== 'boolean') {
+      res.status(400).json(formatErrorResponse('Enabled must be provided as a boolean', 400));
+      return;
+    }
+
+    try {
+      const exerciseRepository = AppDataSource.getRepository(Exercise);
+      const exercise = await exerciseRepository.findOne({
+        where: {
+          guideNumber: parsedGuideNumber,
+          exerciseNumber: parsedExerciseNumber,
+        },
+      });
+
+      if (!exercise) {
+        res.status(404).json(formatErrorResponse('Exercise not found', 404));
+        return;
+      }
+
+      exercise.enabled = enabled;
+      const savedExercise = await exerciseRepository.save(exercise);
+
+      res.status(200).json(formatSuccessResponse({
+        guideNumber: savedExercise.guideNumber,
+        exerciseNumber: savedExercise.exerciseNumber,
+        enabled: savedExercise.enabled,
+      }, 'Exercise updated successfully'));
+    } catch (error) {
+      console.error('Error updating exercise:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));
     }
   }

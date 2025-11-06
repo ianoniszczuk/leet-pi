@@ -43,4 +43,16 @@ router.put(
   adminController.updateUserRoles.bind(adminController)
 );
 
+router.patch(
+  '/guides/:guideNumber',
+  requireAdmin,
+  adminController.updateGuide.bind(adminController)
+);
+
+router.patch(
+  '/guides/:guideNumber/exercises/:exerciseNumber',
+  requireAdmin,
+  adminController.updateExercise.bind(adminController)
+);
+
 export default router;
