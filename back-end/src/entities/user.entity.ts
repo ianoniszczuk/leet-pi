@@ -1,5 +1,6 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { Submission } from './submission.entity.ts';
+import { UserRoles } from './user-roles.entity.ts';
 
 @Entity({ name: 'users' })
 export class User {
@@ -23,6 +24,9 @@ export class User {
 
   @OneToMany(() => Submission, (submission) => submission.user)
   submissions!: Submission[];
+
+  @OneToMany(() => UserRoles, (userRole) => userRole.user)
+  userRoles!: UserRoles[];
 }
 
 export default User;
