@@ -18,6 +18,9 @@ export class User {
   @Column({ name: 'last_name', type: 'varchar', length: 100, nullable: false })
   lastName!: string;
 
+  @Column({ name: 'enabled', type: 'boolean', default: true })
+  enabled!: boolean;
+
   @OneToMany(() => Submission, (submission) => submission.user)
   submissions!: Submission[];
 }
