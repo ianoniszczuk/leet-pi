@@ -1,4 +1,4 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+import type { MigrationInterface, QueryRunner } from "typeorm";
 
 export class UserRolesDeadlineEnabledSession1762463659656 implements MigrationInterface {
     name = 'UserRolesDeadlineEnabledSession1762463659656'
