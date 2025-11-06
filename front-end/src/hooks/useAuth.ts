@@ -34,6 +34,9 @@ export const useAuth = () => {
     // Limpiar tokens de autenticación
     apiService.clearAuthTokens();
     
+    // Limpiar datos de usuario
+    localStorage.removeItem('user_data');
+    
     // Limpiar todo el caché por seguridad
     cacheService.invalidateAll();
     

@@ -102,6 +102,11 @@ export default function Callback() {
 
         apiService.setAuthTokens(authToken, refreshToken);
 
+        // Store user data with roles if available
+        if (data.data?.user) {
+          localStorage.setItem('user_data', JSON.stringify(data.data.user));
+        }
+
         if (!cancelled) {
           navigate('/');
         }

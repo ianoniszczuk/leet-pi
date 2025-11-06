@@ -61,18 +61,20 @@ export class CSVUserService {
       // Habilitar usuarios que están en el CSV
       for (const email of emailsInCSV) {
         try {
-          let user = await userDAO.findByEmail(email);
+          // Normalizar email para búsqueda
+          const normalizedEmail = email.toLowerCase().trim();
+          let user = await userDAO.findByEmail(normalizedEmail);
           
           if (!user) {
             // Crear usuario si no existe (con enabled = true)
-            user = await userDAO.findByEmailOrCreate(email, {
+            user = await userDAO.findByEmailOrCreate(normalizedEmail, {
               enabled: true,
             });
             result.createdCount++;
           } else {
             // Actualizar a enabled = true si no lo está
             if (!user.enabled) {
-              await userService.updateEnabledStatus(email, true);
+              await userService.updateEnabledStatus(normalizedEmail, true);
             }
           }
           result.enabledCount++;

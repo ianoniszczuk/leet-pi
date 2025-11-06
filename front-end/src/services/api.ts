@@ -2,7 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import { API_CONFIG, API_ENDPOINTS } from '@/config/api';
 import { cacheService } from './cacheService';
 import { CACHE_KEYS } from '@/config/cache';
-import type { ApiResponse, User, UserProfile, Submission, SubmissionResponse, SubmissionForm, GuideWithExercises } from '@/types';
+import type { ApiResponse, User, UserProfile, Submission, SubmissionResponse, SubmissionForm, GuideWithExercises, UserStatus, CSVUploadResult } from '@/types';
 
 const AUTH_TOKEN_KEY = 'auth_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
@@ -128,6 +128,25 @@ class ApiService {
 
   async getAvailableExercises(): Promise<ApiResponse<GuideWithExercises[]>> {
     const response = await this.api.get(API_ENDPOINTS.submissions.availableExercises);
+    return response.data;
+  }
+
+  // Admin endpoints
+  async uploadCSV(file: File): Promise<ApiResponse<CSVUploadResult>> {
+    const formData = new FormData();
+    formData.append('csv', file);
+    
+    const response = await this.api.post(API_ENDPOINTS.admin.uploadCSV, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    
+    return response.data;
+  }
+
+  async getUserStatus(): Promise<ApiResponse<UserStatus>> {
+    const response = await this.api.get(API_ENDPOINTS.admin.userStatus);
     return response.data;
   }
 

@@ -6,6 +6,8 @@ import Callback from '@/pages/Callback'
 import SubmitCode from '@/pages/SubmitCode'
 import MySubmissions from '@/pages/MySubmissions'
 import UserProfile from '@/pages/UserProfile'
+import Admin from '@/pages/Admin'
+import AdminRoute from '@/components/auth/AdminRoute'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
 function App() {
@@ -51,6 +53,16 @@ function App() {
           <>
             <Header />
             <UserProfile />
+          </>
+        } />
+        
+        {/* Admin routes */}
+        <Route path="/admin" element={
+          <>
+            <Header />
+            <AdminRoute>
+              <Admin />
+            </AdminRoute>
           </>
         } />
         

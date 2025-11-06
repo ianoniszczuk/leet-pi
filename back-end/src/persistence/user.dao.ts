@@ -26,14 +26,17 @@ export class UserDAO {
   }
 
   /**
-   * Busca un usuario por su email
+   * Busca un usuario por su email (case-insensitive)
    * @param email - Email del usuario
    * @returns Promise<User | null>
    */
   async findByEmail(email: string): Promise<User | null> {
-    return await this.repository.findOne({
-      where: { email },
-    });
+    const normalizedEmail = email.toLowerCase().trim();
+    // Buscar de forma case-insensitive usando query builder
+    return await this.repository
+      .createQueryBuilder('user')
+      .where('LOWER(user.email) = LOWER(:email)', { email: normalizedEmail })
+      .getOne();
   }
 
   /**
@@ -203,7 +206,7 @@ export class UserDAO {
   }
 
   /**
-   * Actualiza el estado enabled de un usuario por email
+   * Actualiza el estado enabled de un usuario por email (case-insensitive)
    * @param email - Email del usuario
    * @param enabled - Estado enabled a establecer
    * @returns Promise<User | null>

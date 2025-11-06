@@ -28,6 +28,8 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
+  enabled?: boolean;
+  roles?: string[];
   submissions?: Submission[];
 }
 
@@ -111,4 +113,19 @@ export interface ProtectedRouteProps {
 
 export interface AuthButtonProps {
   className?: string;
+}
+
+// Admin Types
+export interface UserStatus {
+  total: number;
+  enabled: number;
+  disabled: number;
+}
+
+export interface CSVUploadResult {
+  enabled: number;
+  disabled: number;
+  created: number;
+  totalProcessed: number;
+  errors?: string[];
 }

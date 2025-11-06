@@ -1,10 +1,12 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Code2, FileText, User } from 'lucide-react';
+import { Code2, FileText, User, Shield } from 'lucide-react';
 import AuthButton from '@/components/auth/AuthButton';
 import { useAuth } from '@/hooks/useAuth';
+import { useAdmin } from '@/hooks/useAdmin';
 
 export default function Header() {
   const { isAuthenticated } = useAuth();
+  const { isAdmin } = useAdmin();
   const location = useLocation();
 
   const navItems = [
@@ -13,8 +15,12 @@ export default function Header() {
     { path: '/profile', label: 'Perfil', icon: User },
   ];
 
+  const adminNavItem = isAdmin
+    ? { path: '/admin', label: 'Admin', icon: Shield }
+    : null;
+
   const filteredNavItems = isAuthenticated 
-    ? navItems 
+    ? [...navItems, ...(adminNavItem ? [adminNavItem] : [])]
     : [];
 
   return (

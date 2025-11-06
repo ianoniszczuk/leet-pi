@@ -32,4 +32,10 @@ export const API_ENDPOINTS = {
     status: (id: string) => `/submissions/${id}/status`,
     availableExercises: '/submissions/exercises/available',
   },
+  
+  // Admin
+  admin: {
+    uploadCSV: '/admin/users/upload-csv',
+    userStatus: '/admin/users/status',
+  },
 } as const;
