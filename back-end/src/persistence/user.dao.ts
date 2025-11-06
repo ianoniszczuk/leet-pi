@@ -21,6 +21,7 @@ export class UserDAO {
   async findBySub(sub: string): Promise<User | null> {
     return await this.repository.findOne({
       where: { sub },
+      relations: ['userRoles'],
     });
   }
 
@@ -43,7 +44,7 @@ export class UserDAO {
   async findById(id: string): Promise<User | null> {
     return await this.repository.findOne({
       where: { id },
-      relations: ['submissions'],
+      relations: ['submissions', 'userRoles'],
     });
   }
 
@@ -53,7 +54,7 @@ export class UserDAO {
    */
   async findAll(): Promise<User[]> {
     return await this.repository.find({
-      relations: ['submissions'],
+      relations: ['submissions', 'userRoles'],
       order: { firstName: 'ASC', lastName: 'ASC' },
     });
   }
@@ -71,7 +72,7 @@ export class UserDAO {
     totalPages: number;
   }> {
     const [users, total] = await this.repository.findAndCount({
-      relations: ['submissions'],
+      relations: ['submissions', 'userRoles'],
       order: { firstName: 'ASC', lastName: 'ASC' },
       skip: (page - 1) * limit,
       take: limit,

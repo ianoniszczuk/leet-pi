@@ -3,6 +3,9 @@ import { formatSuccessResponse, formatErrorResponse } from '../utils/responseFor
 import csvUserService from '../services/csvUserService.ts';
 import userService from '../services/userService.ts';
 import userDAO from '../persistence/user.dao.ts';
+import AppDataSource from '../database/data-source.ts';
+import { UserRoles } from '../entities/user-roles.entity.ts';
+import { Roles } from '../entities/roles.enum.ts';
 
 export class AdminController {
   /**
@@ -79,7 +82,98 @@ export class AdminController {
       res.status(500).json(formatErrorResponse('Internal server error', 500));
     }
   }
+
+  /**
+   * Actualiza los roles asociados a un usuario
+   */
+  async updateUserRoles(req: Request, res: Response): Promise<void> {
+    const { userId } = req.params;
+    const { roles } = req.body ?? {};
+
+    if (!userId) {
+      res.status(400).json(formatErrorResponse('User ID is required', 400));
+      return;
+    }
+
+    if (!Array.isArray(roles)) {
+      res.status(400).json(formatErrorResponse('Roles must be provided as an array', 400));
+      return;
+    }
+
+    if (!roles.every((role: unknown) => typeof role === 'string')) {
+      res.status(400).json(formatErrorResponse('Roles must be strings', 400));
+      return;
+    }
+
+    const roleList = roles as string[];
+    const validRoles = new Set(Object.values(Roles));
+    const invalidRoles = roleList.filter((role) => !validRoles.has(role));
+
+    if (invalidRoles.length > 0) {
+      res.status(400).json(formatErrorResponse(`Invalid roles: ${invalidRoles.join(', ')}`, 400));
+      return;
+    }
+
+    const requesterSub = typeof req.user === 'object' && req.user ? (req.user as { sub?: string }).sub : undefined;
+
+    if (!requesterSub) {
+      res.status(401).json(formatErrorResponse('Requester not authenticated', 401));
+      return;
+    }
+
+    try {
+      const [user, requester] = await Promise.all([
+        userService.findById(userId),
+        userService.findBySub(requesterSub),
+      ]);
+
+      if (!user) {
+        res.status(404).json(formatErrorResponse('User not found', 404));
+        return;
+      }
+
+      if (!requester) {
+        res.status(401).json(formatErrorResponse('Requester not found', 401));
+        return;
+      }
+
+      if (requester.id === userId) {
+        res.status(403).json(formatErrorResponse('You cannot modify your own roles', 403));
+        return;
+      }
+
+      const targetIsAdmin = (user.userRoles ?? []).some((role) => role.roleId === Roles.ADMIN);
+
+      if (targetIsAdmin) {
+        res.status(403).json(formatErrorResponse('You cannot modify roles of another admin', 403));
+        return;
+      }
+
+      const userRolesRepository = AppDataSource.getRepository(UserRoles);
+
+      await userRolesRepository.delete({ userId });
+
+      const uniqueRoles = Array.from(new Set(roleList));
+
+      if (uniqueRoles.length > 0) {
+        const userRoleEntities = uniqueRoles.map((roleId) =>
+          userRolesRepository.create({ userId, roleId })
+        );
+        await userRolesRepository.save(userRoleEntities);
+      }
+
+      const updatedUser = await userService.findById(userId);
+      const updatedRoles = (updatedUser?.userRoles ?? []).map((userRole) => userRole.roleId);
+
+      res.status(200).json(formatSuccessResponse({
+        userId,
+        roles: updatedRoles,
+      }, 'User roles updated successfully'));
+    } catch (error) {
+      console.error('Error updating user roles:', error);
+      res.status(500).json(formatErrorResponse('Internal server error', 500));
+    }
+  }
 }
 
 export default new AdminController();
-

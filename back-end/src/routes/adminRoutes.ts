@@ -37,5 +37,10 @@ router.get(
   adminController.getUserStatus.bind(adminController)
 );
 
-export default router;
+router.put(
+  '/users/:userId/roles',
+  requireAdmin,
+  adminController.updateUserRoles.bind(adminController)
+);
 
+export default router;

@@ -135,6 +135,7 @@ export const authenticateAuth = (req: Request, res: Response, next: NextFunction
     const newTokens = jwtService.generateTokens({
       sub: refreshPayload.sub,
       email: refreshPayload.email,
+      roles: refreshPayload.roles ?? [],
     });
 
     res.setHeader('X-Auth-Token', newTokens.authToken);

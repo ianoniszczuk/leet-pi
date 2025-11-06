@@ -49,7 +49,7 @@ export class UserService {
     }
 
     // Si existe, actualizar información si es necesario
-    const needsUpdate = 
+    const needsUpdate =
       user.email !== payload.email ||
       user.firstName !== (payload.given_name || payload.name?.split(' ')[0] || '') ||
       user.lastName !== (payload.family_name || payload.name?.split(' ').slice(1).join(' ') || '');
@@ -141,13 +141,13 @@ export class UserService {
    * Sincroniza o crea un usuario desde Auth0 con verificación de enabled
    * Si el usuario no está habilitado, lanza un error
    */
-  async syncFromAuth0WithEnabledCheck(payload: Auth0Payload): Promise<User> {
+  async syncFromAuth0WithEnabledCheck(payload: Auth0Payload): Promise<User | null> {
     let user = await this.findBySub(payload.sub);
 
     if (!user) {
       // Si no existe por sub, buscar por email (podría ser un usuario creado desde CSV)
       user = await this.findByEmail(payload.email);
-      
+
       if (user) {
         // Usuario existe pero sin sub (creado desde CSV), actualizar con sub de Auth0
         const updatedUser = await userDAO.update(user.id, {
@@ -158,12 +158,11 @@ export class UserService {
         });
         user = updatedUser || user;
       } else {
-        // Si no existe, crear nuevo usuario con enabled = false
-        user = await this.createFromAuth0(payload);
+        return null;
       }
     } else {
       // Si existe, actualizar información si es necesario
-      const needsUpdate = 
+      const needsUpdate =
         user.email !== payload.email ||
         user.firstName !== (payload.given_name || payload.name?.split(' ')[0] || '') ||
         user.lastName !== (payload.family_name || payload.name?.split(' ').slice(1).join(' ') || '');

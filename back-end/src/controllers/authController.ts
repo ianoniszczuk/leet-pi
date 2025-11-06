@@ -12,14 +12,25 @@ export class AuthController {
     }
 
     try {
-      // Verificar y sincronizar usuario con verificación de enabled
-      const auth0Payload = req.user as Auth0Payload;
-      const user = await userService.syncFromAuth0WithEnabledCheck(auth0Payload);
+      const auth0User = req.user as Auth0Payload;
+      const user = await userService.syncFromAuth0WithEnabledCheck(auth0User);
 
-      // Si llegamos aquí, el usuario está habilitado
+      if (!user) {
+        res.status(403).json(formatErrorResponse('User is not registered in the platform', 403));
+        return;
+      }
+
+      if (!user.enabled || !user.sub) {
+        res.status(403).json(formatErrorResponse('User account is disabled', 403));
+        return;
+      }
+
+      const roles = (user.userRoles ?? []).map((userRole) => userRole.roleId);
+
       const { authToken, refreshToken } = jwtService.generateTokens({
         sub: user.sub,
         email: user.email,
+        roles,
       });
 
       res.setHeader('X-Auth-Token', authToken);
@@ -31,6 +42,10 @@ export class AuthController {
           user: {
             sub: user.sub,
             email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            enabled: user.enabled,
+            roles,
           },
         }, 'Login successful'));
     } catch (error: any) {

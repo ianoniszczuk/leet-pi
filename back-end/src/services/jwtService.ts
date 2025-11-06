@@ -9,6 +9,7 @@ export interface TokenPair {
 export interface InternalTokenPayload extends jwt.JwtPayload {
   sub: string;
   email?: string;
+  roles?: string[];
 }
 
 interface TokenConfig {
@@ -49,13 +50,14 @@ class JwtService {
     };
   }
 
-  generateTokens(user: Pick<InternalTokenPayload, 'sub' | 'email'>): TokenPair {
+  generateTokens(user: Pick<InternalTokenPayload, 'sub' | 'email' | 'roles'>): TokenPair {
     const accessConfig = this.getAccessConfig();
     const refreshConfig = this.getRefreshConfig();
 
-    const payload = {
+    const payload: InternalTokenPayload = {
       sub: user.sub,
       email: user.email,
+      roles: user.roles ?? [],
     };
 
     const authToken = jwt.sign(payload, accessConfig.secret, {
