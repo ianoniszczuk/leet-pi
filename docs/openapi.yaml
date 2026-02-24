@@ -1,0 +1,1097 @@
+openapi: 3.0.3
+info:
+  title: Leet-Pi API
+  description: |
+    Backend escalable para MVP de evaluación de ejercicios de programación en C.
+
+    ## Autenticación
+    La mayoría de los endpoints requieren un JWT Bearer token.  
+    Obtené el token haciendo `POST /api/auth/login` con un token Auth0 válido en el header `Authorization: Bearer <auth0_token>`.  
+    El servidor retorna el JWT de la plataforma en el header de respuesta **`X-Auth-Token`**. Usá ese valor para llamadas autenticadas subsecuentes.
+
+    ## Roles
+    - **student** – puede enviar soluciones y ver sus propias submissions.
+    - **admin** – acceso completo, incluyendo gestión de usuarios, guías y ejercicios.
+  version: 1.0.0
+  contact:
+    name: ITBA – leet-pi team
+
+servers:
+  - url: http://localhost:3000/api
+    description: Desarrollo local
+
+tags:
+  - name: Health
+    description: Estado de la API
+  - name: Auth
+    description: Autenticación con Auth0
+  - name: Users
+    description: Gestión de usuarios
+  - name: Submissions
+    description: Envío y consulta de soluciones
+  - name: Admin
+    description: Operaciones administrativas (requieren rol admin)
+
+# ─────────────────────────────────────────────
+# Security schemes
+# ─────────────────────────────────────────────
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT emitido por la plataforma (`X-Auth-Token`). Obtenido vía `POST /api/auth/login`.
+    Auth0Bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token JWT emitido directamente por Auth0. Requerido únicamente en `POST /api/auth/login`.
+
+  # ─── Common response schemas ───────────────
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+        data:
+          description: Payload variado según el endpoint
+      required:
+        - success
+        - message
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            statusCode:
+              type: integer
+          required:
+            - message
+            - statusCode
+      required:
+        - success
+        - error
+
+    # ─── Domain schemas ──────────────────────
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        sub:
+          type: string
+          description: Auth0 subject identifier
+
+    UserSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        submissionCount:
+          type: integer
+
+    SubmissionResult:
+      type: object
+      properties:
+        submissionId:
+          type: integer
+          description: Timestamp (ms) usado como ID único
+        overallStatus:
+          type: string
+          enum: [pending, approved, failed, compilation_error]
+        message:
+          type: string
+        score:
+          type: number
+        totalTests:
+          type: integer
+        passedTests:
+          type: integer
+        failedTests:
+          type: integer
+        compilationError:
+          type: string
+          nullable: true
+        testResults:
+          type: array
+          items:
+            type: object
+        executionTime:
+          type: number
+          nullable: true
+        memoryUsage:
+          type: number
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+
+    SubmissionRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+        guideNumber:
+          type: integer
+        exerciseNumber:
+          type: integer
+        code:
+          type: string
+        success:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    GuideWithExercises:
+      type: object
+      properties:
+        guideNumber:
+          type: integer
+        enabled:
+          type: boolean
+        exercises:
+          type: array
+          items:
+            type: object
+            properties:
+              exerciseNumber:
+                type: integer
+              enabled:
+                type: boolean
+
+  # ─── Reusable responses ─────────────────────
+  responses:
+    Unauthorized:
+      description: Token ausente o inválido
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              message: User not authenticated
+              statusCode: 401
+
+    Forbidden:
+      description: Sin permisos suficientes
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    InternalError:
+      description: Error interno del servidor
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+# ─────────────────────────────────────────────
+# Paths
+# ─────────────────────────────────────────────
+paths:
+
+  # ═══════════════════════════════════════════
+  # HEALTH
+  # ═══════════════════════════════════════════
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      description: Verifica que la API esté corriendo.
+      operationId: healthCheck
+      responses:
+        '200':
+          description: API operativa
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          timestamp:
+                            type: string
+                            format: date-time
+                          version:
+                            type: string
+              example:
+                success: true
+                message: API is running
+                data:
+                  timestamp: '2024-01-01T00:00:00.000Z'
+                  version: '1.0.0'
+
+  # ═══════════════════════════════════════════
+  # AUTH
+  # ═══════════════════════════════════════════
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login con token Auth0
+      description: |
+        Intercambia un token Auth0 válido por tokens JWT de la plataforma.  
+        - El JWT de acceso se retorna en el header **`X-Auth-Token`**.  
+        - El refresh token se retorna en el header **`X-Refresh-Token`**.
+      operationId: login
+      security:
+        - Auth0Bearer: []
+      responses:
+        '200':
+          description: Login exitoso
+          headers:
+            X-Auth-Token:
+              description: JWT de acceso para la plataforma
+              schema:
+                type: string
+            X-Refresh-Token:
+              description: Refresh token
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user:
+                            type: object
+                            properties:
+                              sub:
+                                type: string
+                              email:
+                                type: string
+                              firstName:
+                                type: string
+                              lastName:
+                                type: string
+                              enabled:
+                                type: boolean
+                              roles:
+                                type: array
+                                items:
+                                  type: string
+              example:
+                success: true
+                message: Login successful
+                data:
+                  user:
+                    sub: auth0|abc123
+                    email: user@example.com
+                    firstName: Juan
+                    lastName: Pérez
+                    enabled: true
+                    roles: [student]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ═══════════════════════════════════════════
+  # USERS
+  # ═══════════════════════════════════════════
+  /users/profile:
+    get:
+      tags: [Users]
+      summary: Obtener perfil del usuario autenticado
+      description: Sincroniza y retorna el perfil completo del usuario a partir de su token Auth0.
+      operationId: getProfile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Perfil obtenido
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserProfile'
+              example:
+                success: true
+                message: User profile retrieved successfully
+                data:
+                  id: 550e8400-e29b-41d4-a716-446655440000
+                  email: user@example.com
+                  firstName: Juan
+                  lastName: Pérez
+                  sub: auth0|abc123
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Información básica del usuario actual
+      description: Retorna id, email, firstName y lastName del usuario autenticado.
+      operationId: getCurrentUser
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Usuario actual obtenido
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            format: uuid
+                          email:
+                            type: string
+                          firstName:
+                            type: string
+                          lastName:
+                            type: string
+              example:
+                success: true
+                message: Current user retrieved successfully
+                data:
+                  id: 550e8400-e29b-41d4-a716-446655440000
+                  email: user@example.com
+                  firstName: Juan
+                  lastName: Pérez
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /users:
+    get:
+      tags: [Users]
+      summary: Listar todos los usuarios
+      description: Retorna todos los usuarios registrados. Requiere autenticación (uso administrativo).
+      operationId: getAllUsers
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Lista de usuarios
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/UserSummary'
+              example:
+                success: true
+                message: Users retrieved successfully
+                data:
+                  - id: 550e8400-e29b-41d4-a716-446655440000
+                    email: user@example.com
+                    firstName: Juan
+                    lastName: Pérez
+                    submissionCount: 5
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /users/{id}:
+    get:
+      tags: [Users]
+      summary: Obtener usuario por ID
+      operationId: getUserById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del usuario
+      responses:
+        '200':
+          description: Usuario encontrado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      tags: [Users]
+      summary: Eliminar usuario por ID
+      operationId: deleteUser
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del usuario a eliminar
+      responses:
+        '200':
+          description: Usuario eliminado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                success: true
+                message: User deleted successfully
+                data: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ═══════════════════════════════════════════
+  # SUBMISSIONS
+  # ═══════════════════════════════════════════
+  /submissions:
+    post:
+      tags: [Submissions]
+      summary: Enviar solución para evaluación
+      description: |
+        Envía código C para ser evaluado por el juez. Verifica que el ejercicio exista, esté habilitado y la guía no haya vencido.
+      operationId: submitSolution
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [exerciseNumber, guideNumber, code]
+              properties:
+                exerciseNumber:
+                  type: integer
+                  minimum: 1
+                  description: Número del ejercicio
+                guideNumber:
+                  type: integer
+                  minimum: 1
+                  description: Número de la guía
+                code:
+                  type: string
+                  minLength: 1
+                  maxLength: 10000
+                  description: Código fuente en C
+            example:
+              exerciseNumber: 3
+              guideNumber: 1
+              code: |
+                #include <stdio.h>
+                int main() {
+                    printf("Hello World\n");
+                    return 0;
+                }
+      responses:
+        '200':
+          description: Solución evaluada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SubmissionResult'
+              example:
+                success: true
+                message: Solution submitted successfully
+                data:
+                  submissionId: 1704067200000
+                  overallStatus: approved
+                  message: All tests passed successfully
+                  score: 100
+                  totalTests: 5
+                  passedTests: 5
+                  failedTests: 0
+                  compilationError: null
+                  testResults: []
+                  executionTime: 0.023
+                  memoryUsage: 1024
+                  timestamp: '2024-01-01T00:00:00.000Z'
+        '400':
+          description: Request inválido (validación Joi)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Ejercicio no encontrado, deshabilitado o con deadline vencido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /submissions/exercises/available:
+    get:
+      tags: [Submissions]
+      summary: Listar guías y ejercicios disponibles
+      description: Retorna todas las guías habilitadas con sus ejercicios habilitados. No requiere autenticación.
+      operationId: getAvailableExercises
+      responses:
+        '200':
+          description: Guías disponibles
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/GuideWithExercises'
+              example:
+                success: true
+                message: Available exercises retrieved successfully
+                data:
+                  - guideNumber: 1
+                    enabled: true
+                    exercises:
+                      - exerciseNumber: 1
+                        enabled: true
+                      - exerciseNumber: 2
+                        enabled: true
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /submissions/my:
+    get:
+      tags: [Submissions]
+      summary: Submissions del usuario autenticado
+      description: Retorna todas las submissions del usuario ordenadas por fecha descendente.
+      operationId: getUserSubmissions
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Lista de submissions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/SubmissionRecord'
+              example:
+                success: true
+                message: User submissions retrieved successfully
+                data:
+                  - id: 1704067200000
+                    guideNumber: 1
+                    exerciseNumber: 3
+                    code: '#include <stdio.h>...'
+                    success: true
+                    createdAt: '2024-01-01T00:00:00.000Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /submissions/{submissionId}:
+    get:
+      tags: [Submissions]
+      summary: Obtener submission por ID
+      description: Retorna una submission específica del usuario autenticado. El `submissionId` es el timestamp (ms) retornado al crear la submission.
+      operationId: getSubmissionById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: submissionId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de la submission (timestamp en ms)
+      responses:
+        '200':
+          description: Submission encontrada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SubmissionRecord'
+        '400':
+          description: ID de submission inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /submissions/{submissionId}/status:
+    get:
+      tags: [Submissions]
+      summary: Estado de una submission en el juez
+      description: Consulta el estado de evaluación de una submission directamente al servicio del juez. No requiere autenticación.
+      operationId: getSubmissionStatus
+      parameters:
+        - name: submissionId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de submission en el juez de código
+      responses:
+        '200':
+          description: Estado obtenido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                success: true
+                message: Submission status retrieved successfully
+                data:
+                  status: completed
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ═══════════════════════════════════════════
+  # ADMIN
+  # ═══════════════════════════════════════════
+  /admin/users/upload-csv:
+    post:
+      tags: [Admin]
+      summary: Cargar CSV de usuarios
+      description: |
+        Sube un archivo CSV para habilitar/deshabilitar usuarios en masa.  
+        El CSV debe contener una columna con los emails de los usuarios habilitados.
+        - Usuarios en el CSV → se habilitan (se crean si no existen).
+        - Usuarios en la DB que **no** están en el CSV → se deshabilitan.
+
+        Límite de archivo: **10 MB**.
+      operationId: uploadCSV
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [csv]
+              properties:
+                csv:
+                  type: string
+                  format: binary
+                  description: Archivo CSV (máx. 10 MB)
+      responses:
+        '200':
+          description: CSV procesado sin errores
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          enabled:
+                            type: integer
+                          disabled:
+                            type: integer
+                          created:
+                            type: integer
+                          totalProcessed:
+                            type: integer
+                          errors:
+                            type: array
+                            items:
+                              type: string
+              example:
+                success: true
+                message: CSV processed successfully
+                data:
+                  enabled: 50
+                  disabled: 10
+                  created: 5
+                  totalProcessed: 60
+        '207':
+          description: CSV procesado con errores parciales
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Archivo inválido o CSV vacío
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/users/status:
+    get:
+      tags: [Admin]
+      summary: Estadísticas de usuarios
+      description: Retorna el total, habilitados y deshabilitados de usuarios en la plataforma.
+      operationId: getUserStatus
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Estadísticas obtenidas
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          total:
+                            type: integer
+                          enabled:
+                            type: integer
+                          disabled:
+                            type: integer
+              example:
+                success: true
+                message: User status retrieved successfully
+                data:
+                  total: 120
+                  enabled: 100
+                  disabled: 20
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/users/{userId}/roles:
+    put:
+      tags: [Admin]
+      summary: Actualizar roles de un usuario
+      description: |
+        Reemplaza los roles del usuario indicado.  
+        **Restricciones:**
+        - No se puede modificar los propios roles.
+        - No se puede modificar los roles de otro admin.
+
+        Roles válidos: `student`, `admin`.
+      operationId: updateUserRoles
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del usuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roles]
+              properties:
+                roles:
+                  type: array
+                  items:
+                    type: string
+                    enum: [student, admin]
+                  description: Lista de roles a asignar (reemplaza los existentes)
+            example:
+              roles: [student]
+      responses:
+        '200':
+          description: Roles actualizados
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          userId:
+                            type: string
+                          roles:
+                            type: array
+                            items:
+                              type: string
+              example:
+                success: true
+                message: User roles updated successfully
+                data:
+                  userId: 550e8400-e29b-41d4-a716-446655440000
+                  roles: [student]
+        '400':
+          description: Roles inválidos o request mal formado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/guides/{guideNumber}:
+    patch:
+      tags: [Admin]
+      summary: Actualizar guía
+      description: |
+        Actualiza el estado (enabled) y/o el deadline de una guía.  
+        Al menos uno de `enabled` o `deadline` debe estar presente.
+      operationId: updateGuide
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: guideNumber
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: Número de la guía
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                  description: Habilitar o deshabilitar la guía
+                deadline:
+                  type: string
+                  format: date-time
+                  description: Fecha límite de entrega (ISO 8601). Null para quitar deadline.
+            example:
+              enabled: true
+              deadline: '2024-06-30T23:59:00.000Z'
+      responses:
+        '200':
+          description: Guía actualizada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          guideNumber:
+                            type: integer
+                          enabled:
+                            type: boolean
+                          deadline:
+                            type: string
+                            format: date-time
+                            nullable: true
+              example:
+                success: true
+                message: Guide updated successfully
+                data:
+                  guideNumber: 1
+                  enabled: true
+                  deadline: '2024-06-30T23:59:00.000Z'
+        '400':
+          description: Parámetros inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/guides/{guideNumber}/exercises/{exerciseNumber}:
+    patch:
+      tags: [Admin]
+      summary: Actualizar ejercicio
+      description: Habilita o deshabilita un ejercicio específico dentro de una guía.
+      operationId: updateExercise
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: guideNumber
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: Número de la guía
+        - name: exerciseNumber
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: Número del ejercicio
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled:
+                  type: boolean
+                  description: Nueva disponibilidad del ejercicio
+            example:
+              enabled: false
+      responses:
+        '200':
+          description: Ejercicio actualizado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          guideNumber:
+                            type: integer
+                          exerciseNumber:
+                            type: integer
+                          enabled:
+                            type: boolean
+              example:
+                success: true
+                message: Exercise updated successfully
+                data:
+                  guideNumber: 1
+                  exerciseNumber: 3
+                  enabled: false
+        '400':
+          description: Parámetros inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'

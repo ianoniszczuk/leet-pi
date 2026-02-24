@@ -8,6 +8,13 @@ import routes from '@/routes/index.ts'
 import logger from '@/middleware/logger.ts'
 import { errorHandler } from '@/middleware/errorHandler.ts'
 import { printAuth0Config } from './utils/authTest.ts'
+import swaggerUi from 'swagger-ui-express'
+import YAML from 'yamljs'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 const app = express();
 
@@ -27,6 +34,10 @@ app.use(logger);
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// OpenAPI / Swagger UI
+const swaggerDocument = YAML.load(path.resolve(__dirname, '../../docs/openapi.yaml'))
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))
 
 // API routes
 app.use('/api', routes);
@@ -51,6 +62,7 @@ const start = async () => {
       console.log(`👤 User endpoints: http://localhost:${PORT}/api/users`);
       console.log(`🔐 Auth endpoints: http://localhost:${PORT}/api/auth`);
       console.log(`📝 Submission endpoints: http://localhost:${PORT}/api/submissions`);
+      console.log(`📖 API Docs: http://localhost:${PORT}/api/docs`);
     });
   } catch (err) {
     console.error('❌ Failed to initialize database', err);
@@ -73,4 +85,4 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
-module.exports = app;
+

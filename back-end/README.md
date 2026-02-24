@@ -68,19 +68,60 @@ back-end/
    AUTH0_JWKS_URI=https://your-domain.auth0.com/.well-known/jwks.json
    ```
 
-3. **Configurar base de datos:**
+3. **Levantar la base de datos:**
+
+   > La aplicación requiere PostgreSQL 15+ corriendo en `localhost:5432`. Podés levantarla con Docker (recomendado para desarrollo) o usar una instancia nativa.
+
+   **Opción A — Docker (recomendado):**
    ```bash
-   # Ejecutar migraciones
+   docker run -d \
+     --name leet-pi-db \
+     -e POSTGRES_USER=your_username \
+     -e POSTGRES_PASSWORD=your_password \
+     -e POSTGRES_DB=leet_pi_db \
+     -p 5432:5432 
+   ```
+
+   Para detenerla / reiniciarla:
+   ```bash
+   docker stop leet-pi-db
+   docker start leet-pi-db
+   ```
+
+   **Opción B — PostgreSQL instalado localmente:**
+   ```bash
+   # Ubuntu / Debian
+   sudo service postgresql start
+
+   # macOS (Homebrew)
+   brew services start postgresql@15
+
+   # Crear la base de datos (si no existe)
+   psql -U your_username -c "CREATE DATABASE leet_pi_db;"
+   ```
+
+   Verificá la conexión antes de continuar:
+   ```bash
+   psql -h localhost -U your_username -d leet_pi_db -c "SELECT 1;"
+   ```
+
+4. **Ejecutar migraciones:**
+   ```bash
    npm run migrations:run
    ```
 
-4. **Ejecutar el servidor:**
+5. **Ejecutar el servidor:**
    ```bash
    # Desarrollo
    npm run dev
-   
+
    # Producción
    npm start
+   ```
+
+   La documentación OpenAPI estará disponible en:
+   ```
+   http://localhost:<PORT>/api/docs
    ```
 
 ## 📡 API Endpoints
