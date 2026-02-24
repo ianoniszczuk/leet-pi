@@ -33,6 +33,25 @@ back-end/
 
 ## 🛠️ Instalación
 
+### Opción A — Docker (recomendado)
+
+Levanta automáticamente PostgreSQL, corre las migraciones y arranca el servidor:
+
+```bash
+# Desde la carpeta back-end/
+cp .env-example .env   # ajustar credenciales si es necesario
+docker compose up --build
+```
+
+El servidor estará disponible en `http://localhost:3001`.
+
+> Para levantar también el juez de código, usá el `docker-compose.yml` de la raíz del monorepo:
+> ```bash
+> docker compose up --build   # desde la raíz del repo
+> ```
+
+### Opción B — Local (sin Docker)
+
 1. **Instalar dependencias:**
    ```bash
    npm install
@@ -40,69 +59,17 @@ back-end/
 
 2. **Configurar variables de entorno:**
    ```bash
-   # Crear archivo .env basado en config/config.ts
-   PORT=3001
-   NODE_ENV=development
-   
-   # Base de datos
-   DB_HOST=localhost
-   DB_PORT=5432
-   DB_USERNAME=your_username
-   DB_PASSWORD=your_password
-   DB_NAME=leet_pi_db
-   
-   # Code Judge Service
-   CODE_JUDGE_URL=http://localhost:5000
-   CODE_JUDGE_TIMEOUT=30000
-   
-   # CORS
-   CORS_ORIGIN=http://localhost:3000
-   
-   # Logging
-   LOG_LEVEL=info
-   
-   # Auth0 (ver AUTH0_SETUP.md para configuración completa)
-   AUTH0_DOMAIN=your-domain.auth0.com
-   AUTH0_AUDIENCE=your-api-identifier
-   AUTH0_ISSUER=https://your-domain.auth0.com/
-   AUTH0_JWKS_URI=https://your-domain.auth0.com/.well-known/jwks.json
+   cp .env-example .env
+   # Editar .env con tus credenciales locales
    ```
 
-3. **Levantar la base de datos:**
-
-   > La aplicación requiere PostgreSQL 15+ corriendo en `localhost:5432`. Podés levantarla con Docker (recomendado para desarrollo) o usar una instancia nativa.
-
-   **Opción A — Docker (recomendado):**
-   ```bash
-   docker run -d \
-     --name leet-pi-db \
-     -e POSTGRES_USER=your_username \
-     -e POSTGRES_PASSWORD=your_password \
-     -e POSTGRES_DB=leet_pi_db \
-     -p 5432:5432 
-   ```
-
-   Para detenerla / reiniciarla:
-   ```bash
-   docker stop leet-pi-db
-   docker start leet-pi-db
-   ```
-
-   **Opción B — PostgreSQL instalado localmente:**
+3. **Levantar PostgreSQL localmente** (requiere PostgreSQL 15+):
    ```bash
    # Ubuntu / Debian
    sudo service postgresql start
 
    # macOS (Homebrew)
    brew services start postgresql@15
-
-   # Crear la base de datos (si no existe)
-   psql -U your_username -c "CREATE DATABASE leet_pi_db;"
-   ```
-
-   Verificá la conexión antes de continuar:
-   ```bash
-   psql -h localhost -U your_username -d leet_pi_db -c "SELECT 1;"
    ```
 
 4. **Ejecutar migraciones:**
@@ -112,11 +79,8 @@ back-end/
 
 5. **Ejecutar el servidor:**
    ```bash
-   # Desarrollo
+   # Desarrollo (con hot-reload)
    npm run dev
-
-   # Producción
-   npm start
    ```
 
    La documentación OpenAPI estará disponible en:
@@ -258,6 +222,7 @@ npm run format
 | `AUTH0_AUDIENCE` | Identificador de API en Auth0 | - |
 | `AUTH0_ISSUER` | Issuer de Auth0 | - |
 | `AUTH0_JWKS_URI` | URI de claves públicas de Auth0 | - |
+| `OPENAPI_PATH` | Ruta absoluta al `openapi.yaml` (sobreescrita por Docker) | auto |
 
 ## 📝 Logs
 

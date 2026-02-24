@@ -36,7 +36,8 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // OpenAPI / Swagger UI
-const swaggerDocument = YAML.load(path.resolve(__dirname, '../../docs/openapi.yaml'))
+const openapiPath = process.env.OPENAPI_PATH ?? path.resolve(__dirname, '../../docs/openapi.yaml')
+const swaggerDocument = YAML.load(openapiPath)
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))
 
 // API routes

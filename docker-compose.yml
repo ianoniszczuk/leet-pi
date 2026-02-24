@@ -1,0 +1,54 @@
+services:
+  code-judge:
+    build: ./juez-codigo
+    ports:
+      - "5000:5000"
+    healthcheck:
+      # python:3.10-slim no incluye curl/wget; usamos python directamente
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-leetpi_db}
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  back-end:
+    build: ./back-end
+    env_file: ./back-end/.env
+    environment:
+      # Sobrescribe para apuntar a los servicios internos de Docker
+      DB_HOST: db
+      CODE_JUDGE_URL: http://code-judge:5000
+      # docs/ del monorepo se monta en /docs dentro del contenedor
+      OPENAPI_PATH: /docs/openapi.yaml
+    ports:
+      - "${PORT:-3001}:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+      code-judge:
+        condition: service_healthy
+    command: >
+      sh -c "export TS_NODE_PROJECT=tsconfig.migrations.json &&
+             npx typeorm-ts-node-esm migration:run -d src/database/data-source.ts &&
+             npx tsx src/index.ts"
+    volumes:
+      - ./docs:/docs:ro
+
+volumes:
+  pgdata:
