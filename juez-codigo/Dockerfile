@@ -1,29 +1,28 @@
-FROM python:3.10-slim
-
-# Instalar GCC (para compilar C)
-RUN apt-get update && apt-get install -y gcc build-essential
-
-# Crear carpetas necesarias para el juez
-RUN mkdir -p /tmp/submissions /tests
-
-# Crear carpeta de trabajo
+# ── Stage 1: dependencias ─────────────────────────────────────────
+FROM python:3.10-slim AS deps
 WORKDIR /app
-
-# Copiar requirements e instalar dependencias
+RUN apt-get update && apt-get install -y --no-install-recommends gcc build-essential \
+    && rm -rf /var/lib/apt/lists/*
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar todo tu código
-COPY . .
-
-# Abrir puerto 5000 (según especificaciones)
+# ── Stage 2: desarrollo (--reload para hot-reload) ────────────────
+FROM deps AS dev
+RUN mkdir -p /tmp/submissions /tests
+# El código fuente se monta como volumen desde compose; no se copia aquí.
 EXPOSE 5000
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5000", "--reload"]
 
-# Comando para iniciar la API en puerto 5000
-# Para ejecutar con volúmenes:
-# docker run -d --name code-judge -p 5000:5000 \
-#   -v /host/tests:/tests:ro \
-#   -v /host/submissions:/tmp/submissions \
-#   --memory=256m --cpus=1 --restart=unless-stopped \
-#   code-judge:latest
+# ── Stage 3: producción (non-root user) ───────────────────────────
+FROM python:3.10-slim AS prod
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends gcc build-essential \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=deps /usr/local/lib/python3.10 /usr/local/lib/python3.10
+COPY --from=deps /usr/local/bin /usr/local/bin
+RUN addgroup --system app && adduser --system --ingroup app app
+RUN mkdir -p /tmp/submissions /tests && chown app:app /tmp/submissions /tests
+COPY --chown=app:app . .
+USER app
+EXPOSE 5000
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5000"]

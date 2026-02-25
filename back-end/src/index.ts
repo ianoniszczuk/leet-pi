@@ -1,6 +1,7 @@
 import 'reflect-metadata'
 import express from 'express'
 import AppDataSource from '@/database/data-source.ts'
+import { seedAdmins } from '@/database/seed.ts'
 import cors from 'cors'
 import helmet from 'helmet'
 import config from '@/config/config.ts'
@@ -51,6 +52,19 @@ const start = async () => {
   try {
     await AppDataSource.initialize();
     console.log('📦 Database connected');
+
+    // Ejecutar migraciones pendientes automáticamente
+    const pendingMigrations = await AppDataSource.showMigrations();
+    if (pendingMigrations) {
+      console.log('🔄 Running pending migrations...');
+      await AppDataSource.runMigrations();
+      console.log('✅ Migrations applied');
+    } else {
+      console.log('✅ Migrations up to date');
+    }
+
+    // Poblar administradores iniciales desde scripts/data/admins.cs
+    await seedAdmins(AppDataSource);
 
     // Validar configuración de Auth0
     printAuth0Config();

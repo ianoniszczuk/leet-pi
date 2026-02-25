@@ -1,15 +1,29 @@
+networks:
+  leet-pi-net:
+
+volumes:
+  pgdata:
+  backend_node_modules:
+
 services:
   code-judge:
-    build: ./juez-codigo
+    build:
+      context: ./juez-codigo
+      target: dev
     ports:
       - "5000:5000"
+    volumes:
+      - ./juez-codigo:/app    # hot-reload del código Python
+    restart: unless-stopped
+    networks:
+      - leet-pi-net
     healthcheck:
       # python:3.10-slim no incluye curl/wget; usamos python directamente
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/health')\""]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 15s
 
   db:
     image: postgres:16-alpine
@@ -21,20 +35,24 @@ services:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - leet-pi-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-leetpi_db}"]
       interval: 5s
       timeout: 5s
       retries: 10
 
   back-end:
-    build: ./back-end
+    build:
+      context: ./back-end
+      target: dev
     env_file: ./back-end/.env
     environment:
       # Sobrescribe para apuntar a los servicios internos de Docker
       DB_HOST: db
       CODE_JUDGE_URL: http://code-judge:5000
-      # docs/ del monorepo se monta en /docs dentro del contenedor
       OPENAPI_PATH: /docs/openapi.yaml
     ports:
       - "${PORT:-3001}:3001"
@@ -43,12 +61,11 @@ services:
         condition: service_healthy
       code-judge:
         condition: service_healthy
-    command: >
-      sh -c "export TS_NODE_PROJECT=tsconfig.migrations.json &&
-             npx typeorm-ts-node-esm migration:run -d src/database/data-source.ts &&
-             npx tsx src/index.ts"
     volumes:
+      - ./back-end/src:/app/src                        # hot-reload del código TS
       - ./docs:/docs:ro
-
-volumes:
-  pgdata:
+      - ./back-end/scripts/data:/app/scripts/data:ro
+      - backend_node_modules:/app/node_modules         # preserva node_modules de la imagen
+    restart: unless-stopped
+    networks:
+      - leet-pi-net

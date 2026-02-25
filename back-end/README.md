@@ -18,17 +18,23 @@ Backend escalable para un MVP que permite a estudiantes subir soluciones de ejer
 
 ```
 back-end/
-├── config/           # Configuración centralizada
-├── controllers/      # Lógica de negocio
-├── database/         # Configuración de base de datos
-├── entities/         # Entidades TypeORM
-├── middleware/       # Middleware personalizado
-├── migrations/       # Migraciones de base de datos
-├── routes/          # Definición de rutas
-├── services/        # Servicios externos
-├── utils/           # Utilidades y helpers
-├── index.ts         # Punto de entrada
-└── package.json     # Dependencias
+├── src/
+│   ├── config/           # Configuración centralizada
+│   ├── controllers/      # Lógica de negocio
+│   ├── database/         # Configuración de base de datos
+│   ├── entities/         # Entidades TypeORM
+│   ├── middleware/       # Middleware personalizado
+│   ├── migrations/       # Migraciones de base de datos
+│   ├── routes/           # Definición de rutas
+│   ├── services/         # Servicios externos
+│   ├── utils/            # Utilidades y helpers
+│   └── index.ts          # Punto de entrada
+├── scripts/
+│   ├── data/
+│   │   └── admins.csv        # Lista de administradores iniciales
+│   ├── seed-admins.ts        # Siembra administradores iniciales
+│   └── make-user-admin.ts    # Convierte un usuario existente en admin
+└── package.json
 ```
 
 ## 🛠️ Instalación
@@ -177,6 +183,62 @@ Content-Type: application/json
   }
 }
 ```
+
+## 🛡️ Scripts de Administración
+
+### Seed de administradores iniciales
+
+> **El seed corre automáticamente** cada vez que arranca el servidor (`npm run dev` o Docker). No es necesario ejecutarlo a mano en condiciones normales.
+
+Lo único que hay que hacer antes del primer despliegue es **editar el CSV** con los emails de los admins del proyecto:
+
+```
+back-end/scripts/data/admins.csv
+```
+
+Formato:
+```csv
+email,firstName,lastName
+admin@example.com,Juan,Pérez
+otro@example.com,María,García
+```
+
+Al arrancar, el servidor:
+1. Conecta a la BD
+2. Corre las **migraciones pendientes** automáticamente
+3. Ejecuta el **seed de admins** (idempotente — solo actúa si hay cambios)
+
+Para cada entrada en el CSV el seed:
+- Crea el usuario si no existe (`enabled: true`, `sub: null` — se completa al hacer login con Auth0)
+- Habilita al usuario si estaba deshabilitado
+- Asigna el rol `admin` si no lo tenía
+
+#### Forzar el seed manualmente (sin levantar el servidor)
+
+Si necesitás correr el seed de forma aislada (por ejemplo, para inicializar una BD antes del primer deploy):
+
+```bash
+# Con Docker (compose raíz): la BD expone el puerto 5433 al host
+docker compose up db -d --wait   # desde la raíz del repo
+cd back-end
+DB_PORT=5433 npm run seed-admins
+
+# Con BD local en el puerto estándar
+npm run seed-admins
+
+# Con un CSV alternativo
+npm run seed-admins -- --file /ruta/a/otro-admins.csv
+```
+
+### Promover un usuario existente a admin
+
+Si un usuario ya existe en la BD y querés darle permisos de admin:
+
+```bash
+npm run make-admin -- email@example.com
+```
+
+> ⚠️ Este script solo asigna el rol admin. Si el usuario tiene `enabled: false`, no podrá iniciar sesión. En ese caso usá `seed-admins` o habilitalo manualmente.
 
 ## 🧪 Testing
 
