@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import Editor from '@monaco-editor/react';
 import { Code2, AlertCircle, CheckCircle, Play, Clock, HardDrive, TestTube, Terminal } from 'lucide-react';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import SessionExpiredModal from '@/components/ui/SessionExpiredModal';
@@ -37,7 +38,7 @@ int main() {
     if (availableExercises && availableExercises.length > 0) {
       const firstGuide = availableExercises[0];
       const firstExercise = firstGuide.exercises[0];
-      
+
       setFormData(prev => ({
         ...prev,
         guideNumber: firstGuide.guideNumber,
@@ -60,11 +61,11 @@ int main() {
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    
+
     if (!formData.code.trim()) {
       return;
     }
-    
+
     try {
       setShowResults(true);
       setResult(null); // Limpiar resultado anterior
@@ -80,7 +81,7 @@ int main() {
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => {
       const newData = { ...prev, [field]: value };
-      
+
       // If guideNumber changes, reset exerciseNumber to first available exercise
       if (field === 'guideNumber' && availableExercises) {
         const selectedGuide = availableExercises.find(g => g.guideNumber === value);
@@ -88,7 +89,7 @@ int main() {
           newData.exerciseNumber = selectedGuide.exercises[0].exerciseNumber;
         }
       }
-      
+
       return newData;
     });
   };
@@ -117,7 +118,7 @@ int main() {
 
   return (
     <ProtectedRoute>
-      <SessionExpiredModal 
+      <SessionExpiredModal
         isOpen={showSessionExpiredModal}
         onClose={() => setShowSessionExpiredModal(false)}
       />
@@ -171,7 +172,7 @@ int main() {
                     )}
                   </select>
                 </div>
-                
+
                 <div className="flex items-center gap-3">
                   <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                   <label htmlFor="exerciseNumber" className="text-sm font-semibold text-gray-700">
@@ -204,13 +205,11 @@ int main() {
 
           {/* Code Editor and Results Container */}
           <div className="max-w-7xl mx-auto">
-            <div className={`flex gap-6 transition-all duration-500 ${
-              showResults ? 'flex-col lg:flex-row' : 'flex-row justify-center'
-            }`}>
-              {/* Code Editor */}
-              <div className={`bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden transition-all duration-500 ${
-                showResults ? 'w-full lg:w-1/2' : 'w-full max-w-5xl'
+            <div className={`flex gap-6 transition-all duration-500 ${showResults ? 'flex-col lg:flex-row' : 'flex-row justify-center'
               }`}>
+              {/* Code Editor */}
+              <div className={`bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden transition-all duration-500 ${showResults ? 'w-full lg:w-1/2' : 'w-full max-w-5xl'
+                }`}>
                 {/* Editor Header */}
                 <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -257,15 +256,41 @@ int main() {
                   </div>
                 </div>
 
-                {/* Code Editor */}
-                <div className="relative">
-                  <textarea
-                    id="code"
+                {/* Monaco Code Editor */}
+                <div className="relative" style={{ height: '480px' }}>
+                  <Editor
+                    height="100%"
+                    defaultLanguage="c"
+                    theme="vs-dark"
                     value={formData.code}
-                    onChange={(e) => handleInputChange('code', e.target.value)}
-                    className="w-full h-96 p-6 border-0 focus:outline-none font-mono text-sm resize-none bg-white"
-                    placeholder="#include <stdio.h>&#10;&#10;int main() {&#10;    // Tu código aquí&#10;    return 0;&#10;}"
-                    spellCheck={false}
+                    onChange={(value: string | undefined) => handleInputChange('code', value ?? '')}
+                    loading={
+                      <div className="flex items-center justify-center h-full bg-gray-900">
+                        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    }
+                    options={{
+                      fontSize: 14,
+                      fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace",
+                      fontLigatures: true,
+                      minimap: { enabled: false },
+                      scrollBeyondLastLine: false,
+                      wordWrap: 'on',
+                      tabSize: 4,
+                      insertSpaces: true,
+                      autoIndent: 'full',
+                      formatOnPaste: true,
+                      formatOnType: true,
+                      bracketPairColorization: { enabled: false },
+                      guides: { bracketPairs: false },
+                      suggestOnTriggerCharacters: true,
+                      quickSuggestions: { other: true, comments: false, strings: false },
+                      padding: { top: 16, bottom: 16 },
+                      renderLineHighlight: 'all',
+                      smoothScrolling: true,
+                      cursorBlinking: 'smooth',
+                      cursorSmoothCaretAnimation: 'on',
+                    }}
                   />
                 </div>
               </div>
@@ -300,18 +325,16 @@ function ResultsPanel({ result, error, loading }: { result: SubmissionResponse |
 
   if (error && !result) {
     const isAuthError = error.includes('Sesión expirada') || error.includes('Authentication');
-    
+
     return (
       <div className="p-6">
-        <div className={`border-2 rounded-xl p-6 ${
-          isAuthError 
-            ? 'bg-orange-50 border-orange-200' 
-            : 'bg-red-50 border-red-200'
-        }`}>
+        <div className={`border-2 rounded-xl p-6 ${isAuthError
+          ? 'bg-orange-50 border-orange-200'
+          : 'bg-red-50 border-red-200'
+          }`}>
           <div className="flex items-center gap-3 mb-3">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-              isAuthError ? 'bg-orange-100' : 'bg-red-100'
-            }`}>
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isAuthError ? 'bg-orange-100' : 'bg-red-100'
+              }`}>
               <AlertCircle className={`w-5 h-5 ${isAuthError ? 'text-orange-600' : 'text-red-600'}`} />
             </div>
             <div>
@@ -323,9 +346,8 @@ function ResultsPanel({ result, error, loading }: { result: SubmissionResponse |
               </p>
             </div>
           </div>
-          <div className={`p-3 rounded-lg ${
-            isAuthError ? 'bg-orange-100' : 'bg-red-100'
-          }`}>
+          <div className={`p-3 rounded-lg ${isAuthError ? 'bg-orange-100' : 'bg-red-100'
+            }`}>
             <p className={`font-mono text-sm ${isAuthError ? 'text-orange-700' : 'text-red-700'}`}>
               {error}
             </p>
@@ -369,11 +391,10 @@ function ResultsPanel({ result, error, loading }: { result: SubmissionResponse |
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-              result.overallStatus === 'approved' 
-                ? 'bg-green-100 text-green-800 border border-green-200' 
-                : 'bg-red-100 text-red-800 border border-red-200'
-            }`}>
+            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${result.overallStatus === 'approved'
+              ? 'bg-green-100 text-green-800 border border-green-200'
+              : 'bg-red-100 text-red-800 border border-red-200'
+              }`}>
               {result.overallStatus === 'approved' ? '✅ Aprobado' : '❌ Fallido'}
             </span>
           </div>
@@ -383,17 +404,15 @@ function ResultsPanel({ result, error, loading }: { result: SubmissionResponse |
       {/* Content */}
       <div className="p-6 space-y-6">
         {/* Overall Status */}
-        <div className={`p-6 rounded-xl border-2 ${
-          result.overallStatus === 'approved' 
-            ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-300' 
-            : 'bg-gradient-to-br from-red-50 to-rose-50 border-red-300'
-        }`}>
+        <div className={`p-6 rounded-xl border-2 ${result.overallStatus === 'approved'
+          ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-300'
+          : 'bg-gradient-to-br from-red-50 to-rose-50 border-red-300'
+          }`}>
           <div className="flex items-center gap-4 mb-3">
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-              result.overallStatus === 'approved' 
-                ? 'bg-green-100' 
-                : 'bg-red-100'
-            }`}>
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${result.overallStatus === 'approved'
+              ? 'bg-green-100'
+              : 'bg-red-100'
+              }`}>
               {result.overallStatus === 'approved' ? (
                 <CheckCircle className="w-6 h-6 text-green-600" />
               ) : (
@@ -401,14 +420,12 @@ function ResultsPanel({ result, error, loading }: { result: SubmissionResponse |
               )}
             </div>
             <div>
-              <h4 className={`text-xl font-bold ${
-                result.overallStatus === 'approved' ? 'text-green-800' : 'text-red-800'
-              }`}>
+              <h4 className={`text-xl font-bold ${result.overallStatus === 'approved' ? 'text-green-800' : 'text-red-800'
+                }`}>
                 {result.overallStatus === 'approved' ? '¡Excelente! Aprobado' : 'Necesita correcciones'}
               </h4>
-              <p className={`text-sm ${
-                result.overallStatus === 'approved' ? 'text-green-600' : 'text-red-600'
-              }`}>
+              <p className={`text-sm ${result.overallStatus === 'approved' ? 'text-green-600' : 'text-red-600'
+                }`}>
                 {result.message}
               </p>
             </div>
@@ -489,25 +506,22 @@ function ResultsPanel({ result, error, loading }: { result: SubmissionResponse |
               <p className="text-sm text-gray-600">{result.passedTests} de {result.totalTests} tests pasaron</p>
             </div>
           </div>
-          
+
           <div className="grid gap-4">
             {result.testResults.map((test, index) => (
               <div
                 key={index}
-                className={`p-5 rounded-xl border-2 ${
-                  test.passed 
-                    ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200' 
-                    : 'bg-gradient-to-br from-red-50 to-rose-50 border-red-200'
-                }`}
+                className={`p-5 rounded-xl border-2 ${test.passed
+                  ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200'
+                  : 'bg-gradient-to-br from-red-50 to-rose-50 border-red-200'
+                  }`}
               >
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      test.passed ? 'bg-green-100' : 'bg-red-100'
-                    }`}>
-                      <span className={`text-sm font-bold ${
-                        test.passed ? 'text-green-600' : 'text-red-600'
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${test.passed ? 'bg-green-100' : 'bg-red-100'
                       }`}>
+                      <span className={`text-sm font-bold ${test.passed ? 'text-green-600' : 'text-red-600'
+                        }`}>
                         {test.testNumber}
                       </span>
                     </div>
@@ -516,15 +530,14 @@ function ResultsPanel({ result, error, loading }: { result: SubmissionResponse |
                       <p className="text-sm text-gray-600">Verificación de entrada y salida</p>
                     </div>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                    test.passed 
-                      ? 'bg-green-100 text-green-800 border border-green-200' 
-                      : 'bg-red-100 text-red-800 border border-red-200'
-                  }`}>
+                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${test.passed
+                    ? 'bg-green-100 text-green-800 border border-green-200'
+                    : 'bg-red-100 text-red-800 border border-red-200'
+                    }`}>
                     {test.passed ? '✅ PASS' : '❌ FAIL'}
                   </span>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="bg-white p-4 rounded-lg border">
                     <h5 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
@@ -540,9 +553,8 @@ function ResultsPanel({ result, error, loading }: { result: SubmissionResponse |
                       <span className="w-2 h-2 bg-red-500 rounded-full"></span>
                       Error
                     </h5>
-                    <div className={`font-mono text-sm p-3 rounded border ${
-                      test.error ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700'
-                    }`}>
+                    <div className={`font-mono text-sm p-3 rounded border ${test.error ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700'
+                      }`}>
                       {test.error || 'Sin errores'}
                     </div>
                   </div>
