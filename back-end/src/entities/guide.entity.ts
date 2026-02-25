@@ -9,8 +9,8 @@ export class Guide {
   @Column({ name: 'enabled', type: 'boolean', default: false })
   enabled!: boolean;
 
-  @Column({ name: 'deadline', type: 'timestamp', default: () => 'NOW()' })
-  deadline!: Date;
+  @Column({ name: 'deadline', type: 'timestamp', nullable: true, default: () => 'NULL' })
+  deadline!: Date | null;
 
   @OneToMany(() => Exercise, (exercise) => exercise.guide)
   exercises!: Exercise[];

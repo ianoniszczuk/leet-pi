@@ -72,8 +72,11 @@ export function useCachedApi<T>(
       const response = await apiCallRef.current();
       
       if (response.success && response.data) {
-        // Guardar en caché
-        cacheService.set(cacheKey, response.data, ttl);
+        // Guardar en caché solo si no es un array vacío
+        const isEmpty = Array.isArray(response.data) && response.data.length === 0;
+        if (!isEmpty) {
+          cacheService.set(cacheKey, response.data, ttl);
+        }
         
         setState({
           data: response.data,

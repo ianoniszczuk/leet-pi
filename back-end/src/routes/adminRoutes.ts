@@ -43,6 +43,18 @@ router.put(
   adminController.updateUserRoles.bind(adminController)
 );
 
+router.post(
+  '/guides',
+  requireAdmin,
+  adminController.createGuide.bind(adminController)
+);
+
+router.post(
+  '/guides/:guideNumber/exercises',
+  requireAdmin,
+  adminController.createExercise.bind(adminController)
+);
+
 router.patch(
   '/guides/:guideNumber',
   requireAdmin,

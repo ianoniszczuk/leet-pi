@@ -178,6 +178,114 @@ export class AdminController {
   }
 
   /**
+   * Crea una nueva guía
+   */
+  async createGuide(req: Request, res: Response): Promise<void> {
+    const { guideNumber, enabled, deadline } = req.body ?? {};
+
+    const parsedGuideNumber = Number(guideNumber);
+    if (!Number.isInteger(parsedGuideNumber) || parsedGuideNumber <= 0) {
+      res.status(400).json(formatErrorResponse('Guide number must be a positive integer', 400));
+      return;
+    }
+
+    let parsedDeadline: Date | null = null;
+    if (deadline !== undefined) {
+      const deadlineDate = new Date(deadline);
+      if (Number.isNaN(deadlineDate.valueOf())) {
+        res.status(400).json(formatErrorResponse('Deadline must be a valid date', 400));
+        return;
+      }
+      parsedDeadline = deadlineDate;
+    }
+
+    try {
+      const guideRepository = AppDataSource.getRepository(Guide);
+      const existing = await guideRepository.findOne({ where: { guideNumber: parsedGuideNumber } });
+
+      if (existing) {
+        res.status(409).json(formatErrorResponse('Guide already exists', 409));
+        return;
+      }
+
+      const guide = guideRepository.create({
+        guideNumber: parsedGuideNumber,
+        enabled: typeof enabled === 'boolean' ? enabled : false,
+        deadline: parsedDeadline,
+      });
+
+      const savedGuide = await guideRepository.save(guide);
+
+      res.status(201).json(formatSuccessResponse({
+        guideNumber: savedGuide.guideNumber,
+        enabled: savedGuide.enabled,
+        deadline: savedGuide.deadline,
+      }, 'Guide created successfully'));
+    } catch (error) {
+      console.error('Error creating guide:', error);
+      res.status(500).json(formatErrorResponse('Internal server error', 500));
+    }
+  }
+
+  /**
+   * Crea un nuevo ejercicio en una guía existente
+   */
+  async createExercise(req: Request, res: Response): Promise<void> {
+    const { guideNumber } = req.params;
+    const { exerciseNumber, enabled } = req.body ?? {};
+
+    const parsedGuideNumber = Number(guideNumber);
+    const parsedExerciseNumber = Number(exerciseNumber);
+
+    if (!Number.isInteger(parsedGuideNumber) || parsedGuideNumber <= 0) {
+      res.status(400).json(formatErrorResponse('Guide number must be a positive integer', 400));
+      return;
+    }
+
+    if (!Number.isInteger(parsedExerciseNumber) || parsedExerciseNumber <= 0) {
+      res.status(400).json(formatErrorResponse('Exercise number must be a positive integer', 400));
+      return;
+    }
+
+    try {
+      const guideRepository = AppDataSource.getRepository(Guide);
+      const guide = await guideRepository.findOne({ where: { guideNumber: parsedGuideNumber } });
+
+      if (!guide) {
+        res.status(404).json(formatErrorResponse('Guide not found', 404));
+        return;
+      }
+
+      const exerciseRepository = AppDataSource.getRepository(Exercise);
+      const existing = await exerciseRepository.findOne({
+        where: { guideNumber: parsedGuideNumber, exerciseNumber: parsedExerciseNumber },
+      });
+
+      if (existing) {
+        res.status(409).json(formatErrorResponse('Exercise already exists', 409));
+        return;
+      }
+
+      const exercise = exerciseRepository.create({
+        guideNumber: parsedGuideNumber,
+        exerciseNumber: parsedExerciseNumber,
+        enabled: typeof enabled === 'boolean' ? enabled : false,
+      });
+
+      const savedExercise = await exerciseRepository.save(exercise);
+
+      res.status(201).json(formatSuccessResponse({
+        guideNumber: savedExercise.guideNumber,
+        exerciseNumber: savedExercise.exerciseNumber,
+        enabled: savedExercise.enabled,
+      }, 'Exercise created successfully'));
+    } catch (error) {
+      console.error('Error creating exercise:', error);
+      res.status(500).json(formatErrorResponse('Internal server error', 500));
+    }
+  }
+
+  /**
    * Actualiza el estado habilitado y/o deadline de una guía
    */
   async updateGuide(req: Request, res: Response): Promise<void> {

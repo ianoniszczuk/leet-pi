@@ -6,6 +6,7 @@ import { InitialSchema1757623551991 } from '../migrations/1757623551991-initial-
 import { UserRolesDeadlineEnabledSession1762463659656 } from '../migrations/1762463659656-user-roles-deadline-enabled-session.ts';
 import { ChangeEnabledDefaultToFalse1762464439246 } from '../migrations/1762464439246-change-enabled-default-to-false.ts';
 import { MakeSubNullable1762464552974 } from '../migrations/1762464552974-make-sub-nullable.ts';
+import { DeadlineNullable1740441600000 } from '../migrations/1740441600000-deadline-nullable.ts';
 
 dotenv.config();
 
@@ -26,6 +27,7 @@ const dataSourceOptions: DataSourceOptions = {
     UserRolesDeadlineEnabledSession1762463659656,
     ChangeEnabledDefaultToFalse1762464439246,
     MakeSubNullable1762464552974,
+    DeadlineNullable1740441600000,
   ],
 }
 
