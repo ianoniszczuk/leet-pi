@@ -35,16 +35,14 @@ int main() {
 
   // Update form data when available exercises are loaded
   useEffect(() => {
-    if (availableExercises && availableExercises.length > 0) {
-      const firstGuide = availableExercises[0];
-      const firstExercise = firstGuide.exercises[0];
-
-      setFormData(prev => ({
-        ...prev,
-        guideNumber: firstGuide.guideNumber,
-        exerciseNumber: firstExercise.exerciseNumber,
-      }));
-    }
+    if (!availableExercises || availableExercises.length === 0) return;
+    const firstGuide = availableExercises.find(g => g.exercises.length > 0);
+    if (!firstGuide) return;
+    setFormData(prev => ({
+      ...prev,
+      guideNumber: firstGuide.guideNumber,
+      exerciseNumber: firstGuide.exercises[0].exerciseNumber,
+    }));
   }, [availableExercises]);
 
   // Save code to localStorage whenever it changes

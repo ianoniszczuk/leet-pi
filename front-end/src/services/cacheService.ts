@@ -2,6 +2,7 @@ interface CacheEntry<T = any> {
   data: T;
   timestamp: number;
   ttl: number;
+  etag?: string;
 }
 
 class CacheService {
@@ -41,19 +42,32 @@ class CacheService {
   /**
    * Guarda datos en el caché con TTL específico
    */
-  set<T>(key: string, data: T, ttl: number): void {
+  set<T>(key: string, data: T, ttl: number, etag?: string): void {
     try {
       const cacheKey = this.getCacheKey(key);
       const entry: CacheEntry<T> = {
         data,
         timestamp: Date.now(),
         ttl,
+        ...(etag !== undefined ? { etag } : {}),
       };
 
       localStorage.setItem(cacheKey, JSON.stringify(entry));
       console.log(`[CacheService] Saved to cache: ${key}, expires in ${ttl}ms`);
     } catch (error) {
       console.warn('Error writing to cache:', error);
+    }
+  }
+
+  getEtag(key: string): string | null {
+    try {
+      const cacheKey = this.getCacheKey(key);
+      const cached = localStorage.getItem(cacheKey);
+      if (!cached) return null;
+      const entry: CacheEntry = JSON.parse(cached);
+      return entry.etag ?? null;
+    } catch {
+      return null;
     }
   }
 

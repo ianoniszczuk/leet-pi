@@ -1,41 +1,40 @@
 export const API_CONFIG = {
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api',
   timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
+};
+
+const authEndpoints = {
+  login: '/auth/login',
+};
+
+const userEndpoints = {
+  me: '/users/me',
+  profile: '/users/profile',
+  all: '/users',
+  byId: (id: string) => `/users/${id}`,
+  delete: (id: string) => `/users/${id}`,
+};
+
+const submissionEndpoints = {
+  submit: '/submissions',
+  my: '/submissions/my',
+  byId: (id: string) => `/submissions/${id}`,
+  status: (id: string) => `/submissions/${id}/status`,
+  availableExercises: '/submissions/exercises/available',
+};
+
+const adminEndpoints = {
+  uploadCSV: '/admin/users/upload-csv',
+  userStatus: '/admin/users/status',
+  guide: (n?: number) => (n !== undefined ? `/admin/guides/${n}` : '/admin/guides'),
+  exercise: (g: number, e?: number) => (e !== undefined ? `/admin/guides/${g}/exercises/${e}` : `/admin/guides/${g}/exercises`),
 };
 
 export const API_ENDPOINTS = {
-  // Health
   health: '/health',
-
-  // Auth
-  auth: {
-    login: '/auth/login',
-  },
-  
-  // Users
-  users: {
-    me: '/users/me',
-    profile: '/users/profile',
-    all: '/users',
-    byId: (id: string) => `/users/${id}`,
-    delete: (id: string) => `/users/${id}`,
-  },
-  
-  // Submissions
-  submissions: {
-    submit: '/submissions',
-    my: '/submissions/my',
-    byId: (id: string) => `/submissions/${id}`,
-    status: (id: string) => `/submissions/${id}/status`,
-    availableExercises: '/submissions/exercises/available',
-  },
-  
-  // Admin
-  admin: {
-    uploadCSV: '/admin/users/upload-csv',
-    userStatus: '/admin/users/status',
-  },
+  auth: authEndpoints,
+  users: userEndpoints,
+  submissions: submissionEndpoints,
+  admin: adminEndpoints,
 } as const;

@@ -2,7 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import { API_CONFIG, API_ENDPOINTS } from '@/config/api';
 import { cacheService } from './cacheService';
 import { CACHE_KEYS } from '@/config/cache';
-import type { ApiResponse, User, UserProfile, Submission, SubmissionResponse, SubmissionForm, GuideWithExercises, UserStatus, CSVUploadResult } from '@/types';
+import type { ApiResponse, User, UserProfile, Submission, SubmissionResponse, SubmissionForm, GuideWithExercises, UserStatus, CSVUploadResult, AdminGuide } from '@/types';
 
 const AUTH_TOKEN_KEY = 'auth_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
@@ -131,6 +131,32 @@ class ApiService {
     return response.data;
   }
 
+  async getAvailableExercisesConditional(
+    etag?: string | null
+  ): Promise<
+    | { notModified: true }
+    | { notModified: false; data: GuideWithExercises[]; etag: string | null }
+  > {
+    const headers: Record<string, string> = {};
+    if (etag) headers['If-None-Match'] = etag;
+
+    const response = await this.api.get(
+      API_ENDPOINTS.submissions.availableExercises,
+      {
+        headers,
+        validateStatus: (s) => (s >= 200 && s < 300) || s === 304,
+      }
+    );
+
+    if (response.status === 304) return { notModified: true };
+
+    return {
+      notModified: false,
+      data: response.data.data as GuideWithExercises[],
+      etag: (response.headers['etag'] as string | undefined) ?? null,
+    };
+  }
+
   // Admin endpoints
   async uploadCSV(file: File): Promise<ApiResponse<CSVUploadResult>> {
     const formData = new FormData();
@@ -147,6 +173,42 @@ class ApiService {
 
   async getUserStatus(): Promise<ApiResponse<UserStatus>> {
     const response = await this.api.get(API_ENDPOINTS.admin.userStatus);
+    return response.data;
+  }
+
+  // Admin guide/exercise endpoints
+  async getAdminGuides(): Promise<ApiResponse<AdminGuide[]>> {
+    const response = await this.api.get(API_ENDPOINTS.admin.guide());
+    return response.data;
+  }
+
+  async createGuide(data: { guideNumber: number; enabled?: boolean; deadline?: string | null }): Promise<ApiResponse<AdminGuide>> {
+    const response = await this.api.post(API_ENDPOINTS.admin.guide(), data);
+    return response.data;
+  }
+
+  async updateGuide(n: number, data: { enabled?: boolean; deadline?: string | null }): Promise<ApiResponse<AdminGuide>> {
+    const response = await this.api.patch(API_ENDPOINTS.admin.guide(n), data);
+    return response.data;
+  }
+
+  async deleteGuide(n: number): Promise<ApiResponse> {
+    const response = await this.api.delete(API_ENDPOINTS.admin.guide(n));
+    return response.data;
+  }
+
+  async createExercise(g: number, data: { exerciseNumber: number; enabled?: boolean }): Promise<ApiResponse> {
+    const response = await this.api.post(API_ENDPOINTS.admin.exercise(g), data);
+    return response.data;
+  }
+
+  async updateExercise(g: number, e: number, data: { enabled: boolean }): Promise<ApiResponse> {
+    const response = await this.api.patch(API_ENDPOINTS.admin.exercise(g, e), data);
+    return response.data;
+  }
+
+  async deleteExercise(g: number, e: number): Promise<ApiResponse> {
+    const response = await this.api.delete(API_ENDPOINTS.admin.exercise(g, e));
     return response.data;
   }
 

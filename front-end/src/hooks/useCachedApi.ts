@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { cacheService } from '@/services/cacheService';
 import { apiService } from '@/services/api';
 import { CACHE_KEYS, CACHE_CONFIG } from '@/config/cache';
-import type { ApiResponse } from '@/types';
+import type { ApiResponse, GuideWithExercises } from '@/types';
 
 interface UseCachedApiOptions {
   cacheKey: string;
@@ -170,16 +170,63 @@ export function useCachedApi<T>(
 }
 
 /**
- * Hook específico para obtener ejercicios disponibles con caché
+ * Hook específico para obtener ejercicios disponibles con caché ETag-aware.
+ *
+ * - Cache válido (TTL no vencido): sirve datos locales sin petición de red.
+ * - Cache vencido/ausente: petición condicional con If-None-Match.
+ *   - 304 → refresca el TTL con los mismos datos, sin tocar la UI.
+ *   - 200 → guarda nuevos datos + ETag, actualiza la UI.
  */
 export function useCachedAvailableExercises() {
-  return useCachedApi(
-    () => apiService.getAvailableExercises(),
-    {
-      cacheKey: CACHE_KEYS.availableExercises,
-      ttl: CACHE_CONFIG.availableExercises,
+  const cacheKey = CACHE_KEYS.availableExercises;
+  const ttl = CACHE_CONFIG.availableExercises;
+
+  const [state, setState] = useState<UseCachedApiState<GuideWithExercises[]>>({
+    data: null,
+    loading: false,
+    error: null,
+  });
+
+  const fetchConditional = useCallback(async () => {
+    setState(prev => ({ ...prev, loading: true, error: null }));
+    try {
+      const storedEtag = cacheService.getEtag(cacheKey);
+      const result = await apiService.getAvailableExercisesConditional(storedEtag);
+
+      if (result.notModified) {
+        // Refrescar TTL con los mismos datos sin cambiar la UI
+        const existing = cacheService.get<GuideWithExercises[]>(cacheKey);
+        if (existing) cacheService.set(cacheKey, existing, ttl, storedEtag ?? undefined);
+        setState(prev => ({ ...prev, loading: false }));
+      } else {
+        cacheService.set(cacheKey, result.data, ttl, result.etag ?? undefined);
+        setState({ data: result.data, loading: false, error: null });
+      }
+    } catch (error: any) {
+      const msg = error.response?.data?.error?.message || error.message || 'Error de conexión';
+      setState({ data: null, loading: false, error: msg });
     }
-  );
+  }, [cacheKey, ttl]);
+
+  const refetch = useCallback(async () => {
+    cacheService.invalidate(cacheKey);
+    await fetchConditional();
+  }, [cacheKey, fetchConditional]);
+
+  const invalidateCache = useCallback(() => {
+    cacheService.invalidate(cacheKey);
+  }, [cacheKey]);
+
+  useEffect(() => {
+    const cached = cacheService.get<GuideWithExercises[]>(cacheKey);
+    if (cached) {
+      setState({ data: cached, loading: false, error: null });
+    } else {
+      fetchConditional();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return { ...state, refetch, invalidateCache };
 }
 
 /**

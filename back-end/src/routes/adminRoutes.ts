@@ -5,17 +5,15 @@ import multer from 'multer';
 
 const router = express.Router();
 
-// Configurar multer para manejar archivos en memoria
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB límite
-  },
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    // Aceptar solo archivos CSV
-    if (file.mimetype === 'text/csv' || 
-        file.mimetype === 'application/vnd.ms-excel' ||
-        file.originalname?.toLowerCase().endsWith('.csv')) {
+    if (
+      file.mimetype === 'text/csv' ||
+      file.mimetype === 'application/vnd.ms-excel' ||
+      file.originalname?.toLowerCase().endsWith('.csv')
+    ) {
       cb(null, true);
     } else {
       cb(new Error('Only CSV files are allowed'));
@@ -23,48 +21,20 @@ const upload = multer({
   },
 });
 
-// Rutas protegidas con autenticación y rol admin
-router.post(
-  '/users/upload-csv',
-  requireAdmin,
-  upload.single('csv'),
-  adminController.uploadCSV.bind(adminController)
-);
+const ac = adminController;
 
-router.get(
-  '/users/status',
-  requireAdmin,
-  adminController.getUserStatus.bind(adminController)
-);
+// User routes
+router.post('/users/upload-csv', requireAdmin, upload.single('csv'), ac.uploadCSV.bind(ac));
+router.get('/users/status', requireAdmin, ac.getUserStatus.bind(ac));
+router.put('/users/:userId/roles', requireAdmin, ac.updateUserRoles.bind(ac));
 
-router.put(
-  '/users/:userId/roles',
-  requireAdmin,
-  adminController.updateUserRoles.bind(adminController)
-);
-
-router.post(
-  '/guides',
-  requireAdmin,
-  adminController.createGuide.bind(adminController)
-);
-
-router.post(
-  '/guides/:guideNumber/exercises',
-  requireAdmin,
-  adminController.createExercise.bind(adminController)
-);
-
-router.patch(
-  '/guides/:guideNumber',
-  requireAdmin,
-  adminController.updateGuide.bind(adminController)
-);
-
-router.patch(
-  '/guides/:guideNumber/exercises/:exerciseNumber',
-  requireAdmin,
-  adminController.updateExercise.bind(adminController)
-);
+// Guide routes
+router.get('/guides', requireAdmin, ac.getGuides.bind(ac));
+router.post('/guides', requireAdmin, ac.createGuide.bind(ac));
+router.patch('/guides/:guideNumber', requireAdmin, ac.updateGuide.bind(ac));
+router.delete('/guides/:guideNumber', requireAdmin, ac.deleteGuide.bind(ac));
+router.post('/guides/:guideNumber/exercises', requireAdmin, ac.createExercise.bind(ac));
+router.patch('/guides/:guideNumber/exercises/:exerciseNumber', requireAdmin, ac.updateExercise.bind(ac));
+router.delete('/guides/:guideNumber/exercises/:exerciseNumber', requireAdmin, ac.deleteExercise.bind(ac));
 
 export default router;

@@ -9,26 +9,36 @@ import { Roles } from '../entities/roles.enum.ts';
 import { Guide } from '../entities/guide.entity.ts';
 import { Exercise } from '../entities/exercise.entity.ts';
 
+function parsePositiveInt(value: unknown): number | null {
+  const n = Number(value);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+function rejectBadGuideNumber(res: Response): void {
+  res.status(400).json(formatErrorResponse('Guide number must be a positive integer', 400));
+}
+
+function rejectBadExerciseNumber(res: Response): void {
+  res.status(400).json(formatErrorResponse('Exercise number must be a positive integer', 400));
+}
+
 export class AdminController {
   /**
    * Maneja la carga y procesamiento de un archivo CSV para habilitar/deshabilitar usuarios
    */
   async uploadCSV(req: Request, res: Response): Promise<void> {
     try {
-      // Verificar que se haya subido un archivo
       const file = (req as any).file as Express.Multer.File | undefined;
       if (!file) {
         res.status(400).json(formatErrorResponse('No file uploaded', 400));
         return;
       }
 
-      // Verificar que sea un archivo CSV
       if (!file.mimetype || !file.mimetype.includes('csv') && !file.originalname?.endsWith('.csv')) {
         res.status(400).json(formatErrorResponse('File must be a CSV file', 400));
         return;
       }
 
-      // Leer el contenido del archivo
       const csvContent = file.buffer.toString('utf-8');
 
       if (!csvContent || csvContent.trim().length === 0) {
@@ -36,10 +46,8 @@ export class AdminController {
         return;
       }
 
-      // Procesar el CSV
       const result = await csvUserService.syncUsersFromCSV(csvContent);
 
-      // Preparar respuesta
       const response = {
         enabled: result.enabledCount,
         disabled: result.disabledCount,
@@ -48,8 +56,6 @@ export class AdminController {
         errors: result.errors.length > 0 ? result.errors : undefined,
       };
 
-      // Si hay errores pero también hay procesamiento exitoso, retornar 207 (Multi-Status)
-      // Si solo hay errores, retornar 400
       if (result.errors.length > 0 && result.totalProcessed === 0) {
         res.status(400).json(formatErrorResponse('Error processing CSV', 400, response));
         return;
@@ -69,13 +75,12 @@ export class AdminController {
   async getUserStatus(req: Request, res: Response): Promise<void> {
     try {
       const allUsers = await userDAO.findAll();
-      
+
       const enabledCount = allUsers.filter(u => u.enabled).length;
       const disabledCount = allUsers.filter(u => !u.enabled).length;
-      const totalUsers = allUsers.length;
 
       res.status(200).json(formatSuccessResponse({
-        total: totalUsers,
+        total: allUsers.length,
         enabled: enabledCount,
         disabled: disabledCount,
       }, 'User status retrieved successfully'));
@@ -178,19 +183,47 @@ export class AdminController {
   }
 
   /**
+   * Devuelve todas las guías con todos sus ejercicios (sin filtros)
+   */
+  async getGuides(req: Request, res: Response): Promise<void> {
+    try {
+      const guideRepository = AppDataSource.getRepository(Guide);
+      const guides = await guideRepository.find({
+        relations: ['exercises'],
+        order: { guideNumber: 'ASC' },
+      });
+
+      const result = guides.map((g) => ({
+        guideNumber: g.guideNumber,
+        enabled: g.enabled,
+        deadline: g.deadline,
+        exercises: (g.exercises ?? [])
+          .sort((a, b) => a.exerciseNumber - b.exerciseNumber)
+          .map((e) => ({
+            guideNumber: e.guideNumber,
+            exerciseNumber: e.exerciseNumber,
+            enabled: e.enabled,
+          })),
+      }));
+
+      res.status(200).json(formatSuccessResponse(result, 'Guides retrieved successfully'));
+    } catch (error) {
+      console.error('Error getting guides:', error);
+      res.status(500).json(formatErrorResponse('Internal server error', 500));
+    }
+  }
+
+  /**
    * Crea una nueva guía
    */
   async createGuide(req: Request, res: Response): Promise<void> {
     const { guideNumber, enabled, deadline } = req.body ?? {};
 
-    const parsedGuideNumber = Number(guideNumber);
-    if (!Number.isInteger(parsedGuideNumber) || parsedGuideNumber <= 0) {
-      res.status(400).json(formatErrorResponse('Guide number must be a positive integer', 400));
-      return;
-    }
+    const parsedGuideNumber = parsePositiveInt(guideNumber);
+    if (parsedGuideNumber === null) { rejectBadGuideNumber(res); return; }
 
     let parsedDeadline: Date | null = null;
-    if (deadline !== undefined) {
+    if (deadline !== undefined && deadline !== null) {
       const deadlineDate = new Date(deadline);
       if (Number.isNaN(deadlineDate.valueOf())) {
         res.status(400).json(formatErrorResponse('Deadline must be a valid date', 400));
@@ -228,24 +261,99 @@ export class AdminController {
   }
 
   /**
+   * Actualiza el estado habilitado y/o deadline de una guía
+   */
+  async updateGuide(req: Request, res: Response): Promise<void> {
+    const { guideNumber } = req.params;
+    const { enabled, deadline } = req.body ?? {};
+
+    const parsedGuideNumber = parsePositiveInt(guideNumber);
+    if (parsedGuideNumber === null) { rejectBadGuideNumber(res); return; }
+
+    if (enabled === undefined && deadline === undefined) {
+      res.status(400).json(formatErrorResponse('At least one of enabled or deadline must be provided', 400));
+      return;
+    }
+
+    if (enabled !== undefined && typeof enabled !== 'boolean') {
+      res.status(400).json(formatErrorResponse('Enabled must be a boolean value', 400));
+      return;
+    }
+
+    let parsedDeadline: Date | null | undefined;
+    if (deadline === null) {
+      parsedDeadline = null;
+    } else if (deadline !== undefined) {
+      const deadlineDate = new Date(deadline);
+      if (Number.isNaN(deadlineDate.valueOf())) {
+        res.status(400).json(formatErrorResponse('Deadline must be a valid date', 400));
+        return;
+      }
+      parsedDeadline = deadlineDate;
+    }
+
+    try {
+      const guideRepository = AppDataSource.getRepository(Guide);
+      const guide = await guideRepository.findOne({ where: { guideNumber: parsedGuideNumber } });
+
+      if (!guide) {
+        res.status(404).json(formatErrorResponse('Guide not found', 404));
+        return;
+      }
+
+      if (enabled !== undefined) guide.enabled = enabled;
+      if (parsedDeadline !== undefined) guide.deadline = parsedDeadline;
+
+      const savedGuide = await guideRepository.save(guide);
+
+      res.status(200).json(formatSuccessResponse({
+        guideNumber: savedGuide.guideNumber,
+        enabled: savedGuide.enabled,
+        deadline: savedGuide.deadline,
+      }, 'Guide updated successfully'));
+    } catch (error) {
+      console.error('Error updating guide:', error);
+      res.status(500).json(formatErrorResponse('Internal server error', 500));
+    }
+  }
+
+  /**
+   * Elimina una guía por guideNumber (ejercicios se borran en cascada)
+   */
+  async deleteGuide(req: Request, res: Response): Promise<void> {
+    const { guideNumber } = req.params;
+
+    const parsedGuideNumber = parsePositiveInt(guideNumber);
+    if (parsedGuideNumber === null) { rejectBadGuideNumber(res); return; }
+
+    try {
+      const guideRepository = AppDataSource.getRepository(Guide);
+      const guide = await guideRepository.findOne({ where: { guideNumber: parsedGuideNumber } });
+
+      if (!guide) {
+        res.status(404).json(formatErrorResponse('Guide not found', 404));
+        return;
+      }
+
+      await guideRepository.remove(guide);
+      res.status(200).json(formatSuccessResponse(null, 'Guide deleted successfully'));
+    } catch (error) {
+      console.error('Error deleting guide:', error);
+      res.status(500).json(formatErrorResponse('Internal server error', 500));
+    }
+  }
+
+  /**
    * Crea un nuevo ejercicio en una guía existente
    */
   async createExercise(req: Request, res: Response): Promise<void> {
     const { guideNumber } = req.params;
     const { exerciseNumber, enabled } = req.body ?? {};
 
-    const parsedGuideNumber = Number(guideNumber);
-    const parsedExerciseNumber = Number(exerciseNumber);
-
-    if (!Number.isInteger(parsedGuideNumber) || parsedGuideNumber <= 0) {
-      res.status(400).json(formatErrorResponse('Guide number must be a positive integer', 400));
-      return;
-    }
-
-    if (!Number.isInteger(parsedExerciseNumber) || parsedExerciseNumber <= 0) {
-      res.status(400).json(formatErrorResponse('Exercise number must be a positive integer', 400));
-      return;
-    }
+    const parsedGuideNumber = parsePositiveInt(guideNumber);
+    const parsedExerciseNumber = parsePositiveInt(exerciseNumber);
+    if (parsedGuideNumber === null) { rejectBadGuideNumber(res); return; }
+    if (parsedExerciseNumber === null) { rejectBadExerciseNumber(res); return; }
 
     try {
       const guideRepository = AppDataSource.getRepository(Guide);
@@ -286,90 +394,16 @@ export class AdminController {
   }
 
   /**
-   * Actualiza el estado habilitado y/o deadline de una guía
-   */
-  async updateGuide(req: Request, res: Response): Promise<void> {
-    const { guideNumber } = req.params;
-    const { enabled, deadline } = req.body ?? {};
-
-    const parsedGuideNumber = Number(guideNumber);
-
-    if (!Number.isInteger(parsedGuideNumber) || parsedGuideNumber <= 0) {
-      res.status(400).json(formatErrorResponse('Guide number must be a positive integer', 400));
-      return;
-    }
-
-    if (enabled === undefined && deadline === undefined) {
-      res.status(400).json(formatErrorResponse('At least one of enabled or deadline must be provided', 400));
-      return;
-    }
-
-    if (enabled !== undefined && typeof enabled !== 'boolean') {
-      res.status(400).json(formatErrorResponse('Enabled must be a boolean value', 400));
-      return;
-    }
-
-    let parsedDeadline: Date | undefined;
-    if (deadline !== undefined) {
-      const deadlineDate = new Date(deadline);
-      if (Number.isNaN(deadlineDate.valueOf())) {
-        res.status(400).json(formatErrorResponse('Deadline must be a valid date', 400));
-        return;
-      }
-      parsedDeadline = deadlineDate;
-    }
-
-    try {
-      const guideRepository = AppDataSource.getRepository(Guide);
-      const guide = await guideRepository.findOne({
-        where: { guideNumber: parsedGuideNumber },
-      });
-
-      if (!guide) {
-        res.status(404).json(formatErrorResponse('Guide not found', 404));
-        return;
-      }
-
-      if (enabled !== undefined) {
-        guide.enabled = enabled;
-      }
-
-      if (parsedDeadline) {
-        guide.deadline = parsedDeadline;
-      }
-
-      const savedGuide = await guideRepository.save(guide);
-
-      res.status(200).json(formatSuccessResponse({
-        guideNumber: savedGuide.guideNumber,
-        enabled: savedGuide.enabled,
-        deadline: savedGuide.deadline,
-      }, 'Guide updated successfully'));
-    } catch (error) {
-      console.error('Error updating guide:', error);
-      res.status(500).json(formatErrorResponse('Internal server error', 500));
-    }
-  }
-
-  /**
    * Actualiza el estado habilitado de un ejercicio específico
    */
   async updateExercise(req: Request, res: Response): Promise<void> {
     const { guideNumber, exerciseNumber } = req.params;
     const { enabled } = req.body ?? {};
 
-    const parsedGuideNumber = Number(guideNumber);
-    const parsedExerciseNumber = Number(exerciseNumber);
-
-    if (!Number.isInteger(parsedGuideNumber) || parsedGuideNumber <= 0) {
-      res.status(400).json(formatErrorResponse('Guide number must be a positive integer', 400));
-      return;
-    }
-
-    if (!Number.isInteger(parsedExerciseNumber) || parsedExerciseNumber <= 0) {
-      res.status(400).json(formatErrorResponse('Exercise number must be a positive integer', 400));
-      return;
-    }
+    const parsedGuideNumber = parsePositiveInt(guideNumber);
+    const parsedExerciseNumber = parsePositiveInt(exerciseNumber);
+    if (parsedGuideNumber === null) { rejectBadGuideNumber(res); return; }
+    if (parsedExerciseNumber === null) { rejectBadExerciseNumber(res); return; }
 
     if (typeof enabled !== 'boolean') {
       res.status(400).json(formatErrorResponse('Enabled must be provided as a boolean', 400));
@@ -379,10 +413,7 @@ export class AdminController {
     try {
       const exerciseRepository = AppDataSource.getRepository(Exercise);
       const exercise = await exerciseRepository.findOne({
-        where: {
-          guideNumber: parsedGuideNumber,
-          exerciseNumber: parsedExerciseNumber,
-        },
+        where: { guideNumber: parsedGuideNumber, exerciseNumber: parsedExerciseNumber },
       });
 
       if (!exercise) {
@@ -400,6 +431,36 @@ export class AdminController {
       }, 'Exercise updated successfully'));
     } catch (error) {
       console.error('Error updating exercise:', error);
+      res.status(500).json(formatErrorResponse('Internal server error', 500));
+    }
+  }
+
+  /**
+   * Elimina un ejercicio específico por (guideNumber, exerciseNumber)
+   */
+  async deleteExercise(req: Request, res: Response): Promise<void> {
+    const { guideNumber, exerciseNumber } = req.params;
+
+    const parsedGuideNumber = parsePositiveInt(guideNumber);
+    const parsedExerciseNumber = parsePositiveInt(exerciseNumber);
+    if (parsedGuideNumber === null) { rejectBadGuideNumber(res); return; }
+    if (parsedExerciseNumber === null) { rejectBadExerciseNumber(res); return; }
+
+    try {
+      const exerciseRepository = AppDataSource.getRepository(Exercise);
+      const exercise = await exerciseRepository.findOne({
+        where: { guideNumber: parsedGuideNumber, exerciseNumber: parsedExerciseNumber },
+      });
+
+      if (!exercise) {
+        res.status(404).json(formatErrorResponse('Exercise not found', 404));
+        return;
+      }
+
+      await exerciseRepository.remove(exercise);
+      res.status(200).json(formatSuccessResponse(null, 'Exercise deleted successfully'));
+    } catch (error) {
+      console.error('Error deleting exercise:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));
     }
   }

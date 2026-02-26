@@ -1,7 +1,7 @@
 // Configuración de TTL (Time To Live) para diferentes tipos de datos
 export const CACHE_CONFIG = {
   // Available Exercises - Cambian poco frecuentemente
-  availableExercises: 30 * 60 * 1000,  // 30 minutos
+  availableExercises: 2 * 60 * 1000,   // 2 minutos (ETag refresh on expiry)
   
   // User Profile - Cambia ocasionalmente (estadísticas)
   userProfile: 10 * 60 * 1000,         // 10 minutos

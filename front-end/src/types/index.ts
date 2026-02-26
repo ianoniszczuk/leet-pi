@@ -129,3 +129,16 @@ export interface CSVUploadResult {
   totalProcessed: number;
   errors?: string[];
 }
+
+export interface AdminExercise {
+  guideNumber: number;
+  exerciseNumber: number;
+  enabled: boolean;
+}
+
+export interface AdminGuide {
+  guideNumber: number;
+  enabled: boolean;
+  deadline: string | null;
+  exercises: AdminExercise[];
+}

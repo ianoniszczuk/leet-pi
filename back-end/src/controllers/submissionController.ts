@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
+import { createHash } from 'crypto';
 import codeJudgeService from '../services/codeJudgeService.ts';
 import userService from '../services/userService.ts';
 import AppDataSource from '../database/data-source.ts';
@@ -252,6 +253,18 @@ class SubmissionController {
         })),
       }));
 
+      const etag = createHash('sha256')
+        .update(JSON.stringify(guidesWithExercises))
+        .digest('hex')
+        .slice(0, 32);
+
+      const ifNoneMatch = req.headers['if-none-match'];
+      if (ifNoneMatch === etag) {
+        res.status(304).end();
+        return;
+      }
+
+      res.setHeader('ETag', etag);
       res.status(200).json(formatSuccessResponse(guidesWithExercises, 'Available exercises retrieved successfully'));
 
     } catch (error) {
