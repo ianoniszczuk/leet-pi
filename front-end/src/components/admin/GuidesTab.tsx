@@ -77,7 +77,7 @@ interface GuideModalProps {
 function GuideModal({ initial, onSave, onCancel, loading }: GuideModalProps) {
   const [guideNumber, setGuideNumber] = useState(initial?.guideNumber?.toString() ?? '');
   const [deadline, setDeadline] = useState(
-    initial?.deadline ? new Date(initial.deadline).toISOString().split('T')[0] : ''
+    initial?.deadline ? new Date(initial.deadline).toLocaleDateString('en-CA') : ''
   );
   const isEdit = !!initial;
 
@@ -85,7 +85,7 @@ function GuideModal({ initial, onSave, onCancel, loading }: GuideModalProps) {
     e.preventDefault();
     onSave({
       ...(isEdit ? {} : { guideNumber: Number(guideNumber) }),
-      deadline: deadline ? new Date(deadline).toISOString() : null,
+      deadline: deadline ? (() => { const [y, m, d] = deadline.split('-').map(Number); return new Date(y, m - 1, d, 23, 59, 59).toISOString(); })() : null,
     });
   };
 
@@ -369,8 +369,8 @@ export default function GuidesTab() {
   const deleteMessage = deleteTarget?.type === 'guide'
     ? `¿Eliminar Guía ${deleteTarget.guide.guideNumber}? Se eliminarán todos sus ejercicios.`
     : deleteTarget?.type === 'exercise'
-    ? `¿Eliminar Ejercicio ${deleteTarget.exercise.exerciseNumber} de Guía ${deleteTarget.guide.guideNumber}?`
-    : '';
+      ? `¿Eliminar Ejercicio ${deleteTarget.exercise.exerciseNumber} de Guía ${deleteTarget.guide.guideNumber}?`
+      : '';
 
   const guideHandlers: GuideRowHandlers = {
     onEdit: g => setModal({ type: 'editGuide', guide: g }),

@@ -105,12 +105,12 @@ export async function seedAdmins(
             }
 
             const existingRole = await userRolesRepo.findOne({
-                where: { userId: user.id, roleId: 'admin' },
+                where: { userId: user.id, roleId: 'superadmin' },
             });
 
             if (!existingRole) {
                 await userRolesRepo.save(
-                    userRolesRepo.create({ userId: user.id, roleId: 'admin' }),
+                    userRolesRepo.create({ userId: user.id, roleId: 'superadmin' }),
                 );
                 rolesAssigned++;
             }

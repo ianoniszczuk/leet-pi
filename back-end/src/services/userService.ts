@@ -48,21 +48,6 @@ export class UserService {
       return await this.createFromAuth0(payload);
     }
 
-    // Si existe, actualizar información si es necesario
-    const needsUpdate =
-      user.email !== payload.email ||
-      user.firstName !== (payload.given_name || payload.name?.split(' ')[0] || '') ||
-      user.lastName !== (payload.family_name || payload.name?.split(' ').slice(1).join(' ') || '');
-
-    if (needsUpdate) {
-      const updatedUser = await userDAO.update(user.id, {
-        email: payload.email,
-        firstName: payload.given_name || payload.name?.split(' ')[0] || '',
-        lastName: payload.family_name || payload.name?.split(' ').slice(1).join(' ') || '',
-      });
-      return updatedUser || user;
-    }
-
     return user;
   }
 
@@ -149,31 +134,11 @@ export class UserService {
       user = await this.findByEmail(payload.email);
 
       if (user) {
-        // Usuario existe pero sin sub (creado desde CSV), actualizar con sub de Auth0
-        const updatedUser = await userDAO.update(user.id, {
-          sub: payload.sub,
-          email: payload.email,
-          firstName: payload.given_name || payload.name?.split(' ')[0] || '',
-          lastName: payload.family_name || payload.name?.split(' ').slice(1).join(' ') || '',
-        });
+        // Usuario existe pero sin sub (creado desde CSV), solo vincular el sub de Auth0
+        const updatedUser = await userDAO.update(user.id, { sub: payload.sub });
         user = updatedUser || user;
       } else {
         return null;
-      }
-    } else {
-      // Si existe, actualizar información si es necesario
-      const needsUpdate =
-        user.email !== payload.email ||
-        user.firstName !== (payload.given_name || payload.name?.split(' ')[0] || '') ||
-        user.lastName !== (payload.family_name || payload.name?.split(' ').slice(1).join(' ') || '');
-
-      if (needsUpdate) {
-        const updatedUser = await userDAO.update(user.id, {
-          email: payload.email,
-          firstName: payload.given_name || payload.name?.split(' ')[0] || '',
-          lastName: payload.family_name || payload.name?.split(' ').slice(1).join(' ') || '',
-        });
-        user = updatedUser || user;
       }
     }
 
@@ -185,6 +150,15 @@ export class UserService {
     }
 
     return user;
+  }
+
+  /**
+   * Actualiza el firstName y lastName del usuario identificado por sub
+   */
+  async updateProfile(sub: string, data: { firstName: string; lastName: string }): Promise<User | null> {
+    const user = await userDAO.findBySub(sub);
+    if (!user) return null;
+    return await userDAO.update(user.id, data);
   }
 
   /**

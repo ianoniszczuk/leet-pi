@@ -6,6 +6,7 @@ import type { User } from '@/types';
 export const useAdmin = () => {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
 
@@ -13,6 +14,7 @@ export const useAdmin = () => {
     const checkAdminStatus = async () => {
       if (!isAuthenticated || authLoading) {
         setIsAdmin(false);
+        setIsSuperAdmin(false);
         setIsLoading(false);
         setUser(null);
         return;
@@ -24,8 +26,10 @@ export const useAdmin = () => {
         if (storedUserData) {
           try {
             const parsedUser = JSON.parse(storedUserData);
-            if (parsedUser.roles?.includes('admin')) {
+            const roles: string[] = parsedUser.roles ?? [];
+            if (roles.includes('admin') || roles.includes('superadmin')) {
               setIsAdmin(true);
+              setIsSuperAdmin(roles.includes('superadmin'));
               setUser(parsedUser);
               setIsLoading(false);
               return;
@@ -39,17 +43,19 @@ export const useAdmin = () => {
         const response = await apiService.getCurrentUser();
         if (response.success && response.data) {
           const userData = response.data;
+          const roles: string[] = userData.roles ?? [];
           setUser(userData);
-          // Check if user has admin role
-          const hasAdminRole = userData.roles?.includes('admin') ?? false;
-          setIsAdmin(hasAdminRole);
+          setIsAdmin(roles.includes('admin') || roles.includes('superadmin'));
+          setIsSuperAdmin(roles.includes('superadmin'));
         } else {
           setIsAdmin(false);
+          setIsSuperAdmin(false);
           setUser(null);
         }
       } catch (error) {
         console.error('Error checking admin status:', error);
         setIsAdmin(false);
+        setIsSuperAdmin(false);
         setUser(null);
       } finally {
         setIsLoading(false);
@@ -61,6 +67,7 @@ export const useAdmin = () => {
 
   return {
     isAdmin,
+    isSuperAdmin,
     isLoading,
     user,
   };

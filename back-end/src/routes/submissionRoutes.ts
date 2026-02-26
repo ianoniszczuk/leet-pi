@@ -13,6 +13,13 @@ const router = express.Router();
 router.post('/', authenticateAuth, validateSubmission, submissionController.submitSolution);
 
 /**
+ * @route GET /api/submissions/rankings
+ * @desc Get TOP 5 rankings for an exercise (fewest attempts + earliest completion)
+ * @access Private (requires authentication)
+ */
+router.get('/rankings', authenticateAuth, submissionController.getRankings);
+
+/**
  * @route GET /api/submissions/:submissionId/status
  * @desc Get the status of a submission
  * @access Public

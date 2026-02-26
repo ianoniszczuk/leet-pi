@@ -11,6 +11,7 @@ const authEndpoints = {
 const userEndpoints = {
   me: '/users/me',
   profile: '/users/profile',
+  updateMe: '/users/me',
   all: '/users',
   byId: (id: string) => `/users/${id}`,
   delete: (id: string) => `/users/${id}`,
@@ -22,11 +23,15 @@ const submissionEndpoints = {
   byId: (id: string) => `/submissions/${id}`,
   status: (id: string) => `/submissions/${id}/status`,
   availableExercises: '/submissions/exercises/available',
+  rankings: (g: number, e: number) => `/submissions/rankings?guideNumber=${g}&exerciseNumber=${e}`,
 };
 
 const adminEndpoints = {
   uploadCSV: '/admin/users/upload-csv',
   userStatus: '/admin/users/status',
+  users: '/admin/users',
+  userEnabled: (id: string) => `/admin/users/${id}/enabled`,
+  userRoles: (id: string) => `/admin/users/${id}/roles`,
   guide: (n?: number) => (n !== undefined ? `/admin/guides/${n}` : '/admin/guides'),
   exercise: (g: number, e?: number) => (e !== undefined ? `/admin/guides/${g}/exercises/${e}` : `/admin/guides/${g}/exercises`),
 };

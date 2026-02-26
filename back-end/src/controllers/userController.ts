@@ -1,8 +1,18 @@
 import type { Request, Response } from 'express';
+import type { User } from '../entities/user.entity.ts';
 import userService from '../services/userService.ts';
 import { formatSuccessResponse, formatErrorResponse } from '../utils/responseFormatter.ts';
 
 export class UserController {
+  private userDto(user: User) {
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+    };
+  }
+
   /**
    * Obtiene el perfil del usuario autenticado
    */
@@ -13,18 +23,53 @@ export class UserController {
         return;
       }
 
-      // Sincronizar usuario con Auth0
-      const user = await userService.syncFromAuth0(req.user);
+      const user = await userService.findBySub(req.user.sub);
 
-      res.status(200).json(formatSuccessResponse({
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        sub: user.sub,
-      }, 'User profile retrieved successfully'));
+      if (!user) {
+        res.status(404).json(formatErrorResponse('User not found', 404));
+        return;
+      }
+
+      res.status(200).json(formatSuccessResponse(
+        { ...this.userDto(user), sub: user.sub },
+        'User profile retrieved successfully',
+      ));
     } catch (error) {
       console.error('Error getting user profile:', error);
+      res.status(500).json(formatErrorResponse('Internal server error', 500));
+    }
+  }
+
+  /**
+   * Actualiza el nombre y apellido del usuario autenticado
+   */
+  async updateMe(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json(formatErrorResponse('User not authenticated', 401));
+        return;
+      }
+
+      const { firstName, lastName } = req.body;
+
+      if (!firstName?.trim() || !lastName?.trim()) {
+        res.status(400).json(formatErrorResponse('firstName and lastName are required', 400));
+        return;
+      }
+
+      const updated = await userService.updateProfile(req.user.sub, {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+      });
+
+      if (!updated) {
+        res.status(404).json(formatErrorResponse('User not found', 404));
+        return;
+      }
+
+      res.status(200).json(formatSuccessResponse(this.userDto(updated), 'Profile updated successfully'));
+    } catch (error) {
+      console.error('Error updating user profile:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));
     }
   }
@@ -39,7 +84,6 @@ export class UserController {
         return;
       }
 
-      // Buscar usuario existente
       let user = await userService.findBySub(req.user.sub);
 
       if (!user) {
@@ -47,12 +91,7 @@ export class UserController {
         user = await userService.syncFromAuth0(req.user);
       }
 
-      res.status(200).json(formatSuccessResponse({
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-      }, 'Current user retrieved successfully'));
+      res.status(200).json(formatSuccessResponse(this.userDto(user), 'Current user retrieved successfully'));
     } catch (error) {
       console.error('Error getting current user:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));
@@ -67,10 +106,7 @@ export class UserController {
       const users = await userService.findAll();
 
       const usersData = users.map(user => ({
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
+        ...this.userDto(user),
         submissionCount: user.submissions?.length || 0,
       }));
 
@@ -96,10 +132,7 @@ export class UserController {
       }
 
       res.status(200).json(formatSuccessResponse({
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
+        ...this.userDto(user),
         submissionCount: user.submissions?.length || 0,
       }, 'User retrieved successfully'));
     } catch (error) {

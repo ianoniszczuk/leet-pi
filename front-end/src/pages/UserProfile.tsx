@@ -1,16 +1,20 @@
-import { User, Mail, Calendar, Award, FileText, CheckCircle, XCircle } from 'lucide-react';
+import { useState } from 'react';
+import { User, Mail, Calendar, Award, FileText, CheckCircle, XCircle, Pencil } from 'lucide-react';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 import { useCachedUserProfile, useCachedMySubmissions } from '@/hooks/useCachedApi';
+import EditProfileModal from '@/components/ui/EditProfileModal';
 import type { UserProfile, Submission } from '@/types';
 
 export default function UserProfile() {
   const { user: auth0User } = useAuth();
-  
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
   const {
     data: userProfile,
     loading: profileLoading,
     error: profileError,
+    refetch: refetchProfile,
   } = useCachedUserProfile();
 
   const {
@@ -112,10 +116,19 @@ export default function UserProfile() {
                     <User className="w-8 h-8 text-primary-600" />
                   )}
                 </div>
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    {userProfile?.firstName} {userProfile?.lastName}
-                  </h2>
+                <div className="flex-1">
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-xl font-semibold text-gray-900">
+                      {userProfile?.firstName} {userProfile?.lastName}
+                    </h2>
+                    <button
+                      onClick={() => setIsEditModalOpen(true)}
+                      className="text-gray-400 hover:text-primary-600 transition-colors"
+                      title="Editar perfil"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                  </div>
                   <p className="text-gray-600">{userProfile?.email}</p>
                 </div>
               </div>
@@ -292,6 +305,13 @@ export default function UserProfile() {
           </div>
         </div>
       </div>
+      <EditProfileModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSaved={refetchProfile}
+        currentFirstName={userProfile?.firstName ?? ''}
+        currentLastName={userProfile?.lastName ?? ''}
+      />
     </ProtectedRoute>
   );
 }

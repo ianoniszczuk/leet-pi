@@ -11,13 +11,14 @@ info:
 
     ## Roles
     - **student** – puede enviar soluciones y ver sus propias submissions.
-    - **admin** – acceso completo, incluyendo gestión de usuarios, guías y ejercicios.
+    - **admin** – acceso a operaciones administrativas de guías, ejercicios y usuarios normales.
+    - **superadmin** – nivel más alto: todo lo que puede admin más gestión de admins y asignación de roles.
   version: 1.0.0
   contact:
     name: ITBA – leet-pi team
 
 servers:
-  - url: http://localhost:3000/api
+  - url: http://localhost:3001/api
     description: Desarrollo local
 
 tags:
@@ -85,6 +86,28 @@ components:
         - error
 
     # ─── Domain schemas ──────────────────────
+    AdminUser:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        enabled:
+          type: boolean
+        roles:
+          type: array
+          items:
+            type: string
+            enum: [admin, superadmin]
+      required: [id, email, firstName, lastName, enabled, roles]
+
     UserProfile:
       type: object
       properties:
@@ -170,6 +193,51 @@ components:
         createdAt:
           type: string
           format: date-time
+
+    RankingFewestEntry:
+      type: object
+      properties:
+        rank:
+          type: integer
+          example: 1
+        fullName:
+          type: string
+          example: Ana García
+        attempts:
+          type: integer
+          example: 2
+
+    RankingEarliestEntry:
+      type: object
+      properties:
+        rank:
+          type: integer
+          example: 1
+        fullName:
+          type: string
+          example: Juan Pérez
+        submittedAt:
+          type: string
+          format: date-time
+        marginMs:
+          type: integer
+          description: Milisegundos de margen antes del deadline
+          example: 86400000
+
+    ExerciseRankingsData:
+      type: object
+      properties:
+        hasDeadline:
+          type: boolean
+        fewestAttempts:
+          type: array
+          items:
+            $ref: '#/components/schemas/RankingFewestEntry'
+        earliestCompletion:
+          type: array
+          description: Solo presente (y no vacío) si hasDeadline es true
+          items:
+            $ref: '#/components/schemas/RankingEarliestEntry'
 
     GuideWithExercises:
       type: object
@@ -371,6 +439,65 @@ paths:
           $ref: '#/components/responses/InternalError'
 
   /users/me:
+    patch:
+      tags: [Users]
+      summary: Actualizar nombre y apellido del usuario autenticado
+      description: Permite al usuario autenticado actualizar su firstName y lastName.
+      operationId: updateMe
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [firstName, lastName]
+              properties:
+                firstName:
+                  type: string
+                  example: Juan
+                lastName:
+                  type: string
+                  example: Pérez
+      responses:
+        '200':
+          description: Perfil actualizado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            format: uuid
+                          email:
+                            type: string
+                          firstName:
+                            type: string
+                          lastName:
+                            type: string
+              example:
+                success: true
+                message: Profile updated successfully
+                data:
+                  id: 550e8400-e29b-41d4-a716-446655440000
+                  email: user@example.com
+                  firstName: Juan
+                  lastName: Pérez
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
     get:
       tags: [Users]
       summary: Información básica del usuario actual
@@ -673,6 +800,72 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /submissions/rankings:
+    get:
+      tags: [Submissions]
+      summary: TOP 5 rankings de un ejercicio
+      description: |
+        Retorna dos rankings para el ejercicio indicado (solo usuarios con `enabled = true`):
+        - **fewestAttempts**: los 5 usuarios que resolvieron el ejercicio con menos intentos (se cuentan todos los intentos hasta el primer éxito inclusive).
+        - **earliestCompletion**: los 5 usuarios que resolvieron el ejercicio con mayor margen antes del deadline (solo si la guía tiene deadline).
+      operationId: getExerciseRankings
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: guideNumber
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: Número de la guía
+        - name: exerciseNumber
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: Número del ejercicio
+      responses:
+        '200':
+          description: Rankings obtenidos
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ExerciseRankingsData'
+              example:
+                success: true
+                message: Rankings retrieved successfully
+                data:
+                  hasDeadline: true
+                  fewestAttempts:
+                    - rank: 1
+                      fullName: Ana García
+                      attempts: 1
+                    - rank: 2
+                      fullName: Juan Pérez
+                      attempts: 3
+                  earliestCompletion:
+                    - rank: 1
+                      fullName: Juan Pérez
+                      submittedAt: '2024-06-28T10:00:00.000Z'
+                      marginMs: 172800000
+        '400':
+          description: guideNumber o exerciseNumber inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   /submissions/{submissionId}:
     get:
       tags: [Submissions]
@@ -744,6 +937,116 @@ paths:
   # ═══════════════════════════════════════════
   # ADMIN
   # ═══════════════════════════════════════════
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: Listar todos los usuarios (admin)
+      description: Retorna el listado completo de usuarios con sus roles y estado. Requiere rol `admin` o `superadmin`.
+      operationId: getAdminUsers
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Listado de usuarios
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/AdminUser'
+              example:
+                success: true
+                message: Users retrieved successfully
+                data:
+                  - id: 550e8400-e29b-41d4-a716-446655440000
+                    email: user@example.com
+                    firstName: Juan
+                    lastName: Pérez
+                    enabled: true
+                    roles: []
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/users/{userId}/enabled:
+    patch:
+      tags: [Admin]
+      summary: Habilitar o deshabilitar un usuario
+      description: |
+        Cambia el estado `enabled` de un usuario.
+        **Reglas de acceso:**
+        - Nadie puede modificar un `superadmin`.
+        - Solo un `superadmin` puede modificar a un `admin`.
+        - Un `admin` puede modificar usuarios normales.
+        - Nadie puede modificar su propio estado.
+      operationId: updateUserEnabled
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del usuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled:
+                  type: boolean
+            example:
+              enabled: false
+      responses:
+        '200':
+          description: Estado actualizado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AdminUser'
+              example:
+                success: true
+                message: User updated successfully
+                data:
+                  id: 550e8400-e29b-41d4-a716-446655440000
+                  email: user@example.com
+                  firstName: Juan
+                  lastName: Pérez
+                  enabled: false
+                  roles: []
+        '400':
+          description: Parámetros inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   /admin/users/upload-csv:
     post:
       tags: [Admin]
@@ -866,14 +1169,15 @@ paths:
   /admin/users/{userId}/roles:
     put:
       tags: [Admin]
-      summary: Actualizar roles de un usuario
+      summary: Actualizar roles de un usuario (solo superadmin)
       description: |
-        Reemplaza los roles del usuario indicado.  
+        Reemplaza los roles del usuario indicado. **Requiere rol `superadmin`.**
         **Restricciones:**
         - No se puede modificar los propios roles.
-        - No se puede modificar los roles de otro admin.
+        - No se puede modificar los roles de un `superadmin`.
+        - Solo se puede asignar/quitar el rol `admin` (no `superadmin`).
 
-        Roles válidos: `student`, `admin`.
+        Roles válidos para asignar: `admin`.
       operationId: updateUserRoles
       security:
         - BearerAuth: []
@@ -897,8 +1201,8 @@ paths:
                   type: array
                   items:
                     type: string
-                    enum: [student, admin]
-                  description: Lista de roles a asignar (reemplaza los existentes)
+                    enum: [admin]
+                  description: Lista de roles a asignar (reemplaza los existentes). Solo se admite 'admin'.
             example:
               roles: [student]
       responses:

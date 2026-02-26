@@ -106,6 +106,26 @@ export interface GuideWithExercises {
   exercises: AvailableExercise[];
 }
 
+// Ranking Types
+export interface RankingFewestEntry {
+  rank: number;
+  fullName: string;
+  attempts: number;
+}
+
+export interface RankingEarliestEntry {
+  rank: number;
+  fullName: string;
+  submittedAt: string;
+  marginMs: number;
+}
+
+export interface ExerciseRankingsData {
+  hasDeadline: boolean;
+  fewestAttempts: RankingFewestEntry[];
+  earliestCompletion: RankingEarliestEntry[];
+}
+
 // Component Props Types
 export interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -116,6 +136,15 @@ export interface AuthButtonProps {
 }
 
 // Admin Types
+export interface AdminUser {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  enabled: boolean;
+  roles: string[];
+}
+
 export interface UserStatus {
   total: number;
   enabled: number;

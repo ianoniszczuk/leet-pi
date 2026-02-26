@@ -7,6 +7,7 @@ const router = express.Router();
 // Rutas protegidas que requieren autenticación
 router.get('/profile', authenticateAuth, userController.getProfile.bind(userController));
 router.get('/me', authenticateAuth, userController.getCurrentUser.bind(userController));
+router.patch('/me', authenticateAuth, userController.updateMe.bind(userController));
 
 // Rutas administrativas (requieren autenticación)
 router.get('/', authenticateAuth, userController.getAllUsers.bind(userController));

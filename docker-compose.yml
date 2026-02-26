@@ -31,6 +31,9 @@ services:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
       POSTGRES_DB: ${DB_NAME:-leetpi_db}
+      TZ: America/Argentina/Buenos_Aires
+      PGTZ: America/Argentina/Buenos_Aires
+    command: postgres -c timezone=America/Argentina/Buenos_Aires
     ports:
       - "5433:5432"
     volumes:

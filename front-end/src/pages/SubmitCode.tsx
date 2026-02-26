@@ -3,6 +3,7 @@ import Editor from '@monaco-editor/react';
 import { Code2, AlertCircle, CheckCircle, Play, Clock, HardDrive, TestTube, Terminal } from 'lucide-react';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import SessionExpiredModal from '@/components/ui/SessionExpiredModal';
+import ExerciseRankings from '@/components/rankings/ExerciseRankings';
 import { useSubmission } from '@/hooks/useApi';
 import { useCachedAvailableExercises } from '@/hooks/useCachedApi';
 import type { SubmissionResponse } from '@/types';
@@ -22,6 +23,7 @@ int main() {
   const [result, setResult] = useState<SubmissionResponse | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [showSessionExpiredModal, setShowSessionExpiredModal] = useState(false);
+  const [rankingsRefreshKey, setRankingsRefreshKey] = useState(0);
   const { submitSolution, loading, error } = useSubmission();
   const { data: availableExercises, loading: exercisesLoading, error: exercisesError } = useCachedAvailableExercises();
 
@@ -69,6 +71,9 @@ int main() {
       setResult(null); // Limpiar resultado anterior
       const response = await submitSolution(formData);
       setResult(response);
+      if (response?.overallStatus === 'approved') {
+        setRankingsRefreshKey(prev => prev + 1);
+      }
     } catch (error: any) {
       console.error('Error submitting code:', error);
       setShowResults(true);
@@ -133,7 +138,7 @@ int main() {
           </div>
 
           {/* Sophisticated Selectors */}
-          <div className="max-w-4xl mx-auto mb-8">
+          <div className="max-w-5xl mx-auto mb-8">
             <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
               {exercisesError && (
                 <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -208,6 +213,7 @@ int main() {
               {/* Code Editor */}
               <div className={`bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden transition-all duration-500 ${showResults ? 'w-full lg:w-1/2' : 'w-full max-w-5xl'
                 }`}>
+
                 {/* Editor Header */}
                 <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -300,6 +306,15 @@ int main() {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Rankings */}
+          <div className="max-w-5xl mx-auto mt-6">
+            <ExerciseRankings
+              guideNumber={formData.guideNumber}
+              exerciseNumber={formData.exerciseNumber}
+              refreshKey={rankingsRefreshKey}
+            />
           </div>
         </div>
       </div>

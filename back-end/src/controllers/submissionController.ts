@@ -225,6 +225,109 @@ class SubmissionController {
     }
   }
 
+  async getRankings(req: Request, res: Response, next: NextFunction) {
+    try {
+      const guideNumber = parseInt(req.query['guideNumber'] as string);
+      const exerciseNumber = parseInt(req.query['exerciseNumber'] as string);
+
+      if (isNaN(guideNumber) || isNaN(exerciseNumber)) {
+        res.status(400).json(formatErrorResponse('guideNumber and exerciseNumber must be integers', 400));
+        return;
+      }
+
+      const [guideRows, fewestRows, earliestRows] = await Promise.all([
+        AppDataSource.query(
+          `SELECT deadline FROM guides WHERE guide_number = $1`,
+          [guideNumber]
+        ),
+        AppDataSource.query(
+          `WITH first_success AS (
+            SELECT user_id, MIN(created_at) AS first_success_at
+            FROM submissions
+            WHERE guide_number = $1
+              AND exercise_number = $2
+              AND success = true
+            GROUP BY user_id
+          ),
+          attempts_count AS (
+            SELECT s.user_id, COUNT(*)::int AS attempts, fs.first_success_at
+            FROM submissions s
+            INNER JOIN first_success fs ON s.user_id = fs.user_id
+            WHERE s.guide_number = $1
+              AND s.exercise_number = $2
+              AND s.created_at <= fs.first_success_at
+            GROUP BY s.user_id, fs.first_success_at
+          )
+          SELECT
+            u.first_name AS "firstName",
+            u.last_name  AS "lastName",
+            ac.attempts
+          FROM attempts_count ac
+          INNER JOIN users u ON ac.user_id = u.id
+          WHERE u.enabled = true
+            AND NOT EXISTS (
+              SELECT 1 FROM user_roles ur
+              WHERE ur.user_id = u.id
+                AND ur.role_id IN ('admin', 'superadmin')
+            )
+          ORDER BY ac.attempts ASC, ac.first_success_at ASC
+          LIMIT 5`,
+          [guideNumber, exerciseNumber]
+        ),
+        AppDataSource.query(
+          `SELECT
+            u.first_name       AS "firstName",
+            u.last_name        AS "lastName",
+            MIN(s.created_at)  AS "submittedAt",
+            g.deadline         AS "deadline"
+          FROM submissions s
+          INNER JOIN users u ON s.user_id = u.id
+          INNER JOIN guides g ON g.guide_number = $1
+          WHERE s.guide_number = $1
+            AND s.exercise_number = $2
+            AND s.success = true
+            AND u.enabled = true
+            AND NOT EXISTS (
+              SELECT 1 FROM user_roles ur
+              WHERE ur.user_id = u.id
+                AND ur.role_id IN ('admin', 'superadmin')
+            )
+          GROUP BY u.id, u.first_name, u.last_name, g.deadline
+          ORDER BY "submittedAt" ASC
+          LIMIT 5`,
+          [guideNumber, exerciseNumber]
+        ),
+      ]);
+
+      const deadline: Date | null = guideRows[0]?.deadline ?? null;
+      const hasDeadline = deadline !== null;
+
+      const fewestAttempts = (fewestRows as { firstName: string; lastName: string; attempts: number }[]).map(
+        (row, i) => ({
+          rank: i + 1,
+          fullName: `${row.firstName} ${row.lastName}`,
+          attempts: row.attempts,
+        })
+      );
+
+      const earliestCompletion = hasDeadline
+        ? (earliestRows as { firstName: string; lastName: string; submittedAt: string; deadline: string }[]).map(
+            (row, i) => ({
+              rank: i + 1,
+              fullName: `${row.firstName} ${row.lastName}`,
+              submittedAt: row.submittedAt,
+              marginMs: new Date(deadline!).getTime() - new Date(row.submittedAt).getTime(),
+            })
+          )
+        : [];
+
+      res.status(200).json(formatSuccessResponse({ hasDeadline, fewestAttempts, earliestCompletion }, 'Rankings retrieved successfully'));
+    } catch (error) {
+      console.error('Error getting rankings:', error);
+      next(error);
+    }
+  }
+
   async getAvailableExercises(req: Request, res: Response, next: NextFunction) {
     try {
       const guideRepository = AppDataSource.getRepository(Guide);

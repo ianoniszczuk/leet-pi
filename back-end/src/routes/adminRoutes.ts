@@ -1,6 +1,6 @@
 import express from 'express';
 import adminController from '../controllers/adminController.ts';
-import { requireAdmin } from '../middleware/adminAuth.ts';
+import { requireAdmin, requireSuperAdmin } from '../middleware/adminAuth.ts';
 import multer from 'multer';
 
 const router = express.Router();
@@ -24,9 +24,11 @@ const upload = multer({
 const ac = adminController;
 
 // User routes
+router.get('/users', requireAdmin, ac.getUserList.bind(ac));
 router.post('/users/upload-csv', requireAdmin, upload.single('csv'), ac.uploadCSV.bind(ac));
 router.get('/users/status', requireAdmin, ac.getUserStatus.bind(ac));
-router.put('/users/:userId/roles', requireAdmin, ac.updateUserRoles.bind(ac));
+router.patch('/users/:userId/enabled', requireAdmin, ac.updateUserEnabled.bind(ac));
+router.put('/users/:userId/roles', requireSuperAdmin, ac.updateUserRoles.bind(ac));
 
 // Guide routes
 router.get('/guides', requireAdmin, ac.getGuides.bind(ac));

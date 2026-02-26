@@ -91,7 +91,106 @@ export class AdminController {
   }
 
   /**
-   * Actualiza los roles asociados a un usuario
+   * Devuelve el listado de todos los usuarios con sus roles
+   */
+  async getUserList(req: Request, res: Response): Promise<void> {
+    try {
+      const users = await userDAO.findAll();
+      const result = users.map((u) => ({
+        id: u.id,
+        email: u.email,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        enabled: u.enabled,
+        roles: (u.userRoles ?? []).map((r) => r.roleId),
+      }));
+      res.status(200).json(formatSuccessResponse(result, 'Users retrieved successfully'));
+    } catch (error) {
+      console.error('Error getting user list:', error);
+      res.status(500).json(formatErrorResponse('Internal server error', 500));
+    }
+  }
+
+  /**
+   * Habilita o deshabilita un usuario con reglas de acceso según el rol del requester
+   */
+  async updateUserEnabled(req: Request, res: Response): Promise<void> {
+    const { userId } = req.params;
+    const { enabled } = req.body ?? {};
+
+    if (!userId) {
+      res.status(400).json(formatErrorResponse('User ID is required', 400));
+      return;
+    }
+
+    if (typeof enabled !== 'boolean') {
+      res.status(400).json(formatErrorResponse('enabled must be a boolean', 400));
+      return;
+    }
+
+    const requesterSub = typeof req.user === 'object' && req.user
+      ? (req.user as { sub?: string }).sub
+      : undefined;
+
+    if (!requesterSub) {
+      res.status(401).json(formatErrorResponse('Requester not authenticated', 401));
+      return;
+    }
+
+    try {
+      const [target, requester] = await Promise.all([
+        userService.findById(userId),
+        userService.findBySub(requesterSub),
+      ]);
+
+      if (!target) {
+        res.status(404).json(formatErrorResponse('User not found', 404));
+        return;
+      }
+
+      if (!requester) {
+        res.status(401).json(formatErrorResponse('Requester not found', 401));
+        return;
+      }
+
+      if (requester.id === userId) {
+        res.status(403).json(formatErrorResponse('You cannot modify your own status', 403));
+        return;
+      }
+
+      const targetRoles = (target.userRoles ?? []).map((r) => r.roleId);
+      const requesterRoles = (requester.userRoles ?? []).map((r) => r.roleId);
+
+      // Nadie puede deshabilitar a un superadmin
+      if (targetRoles.includes(Roles.SUPERADMIN)) {
+        res.status(403).json(formatErrorResponse('Cannot modify a superadmin', 403));
+        return;
+      }
+
+      // Solo superadmin puede modificar a un admin
+      if (targetRoles.includes(Roles.ADMIN) && !requesterRoles.includes(Roles.SUPERADMIN)) {
+        res.status(403).json(formatErrorResponse('Only superadmin can modify an admin', 403));
+        return;
+      }
+
+      const updated = await userDAO.update(userId, { enabled });
+
+      res.status(200).json(formatSuccessResponse({
+        id: updated!.id,
+        email: updated!.email,
+        firstName: updated!.firstName,
+        lastName: updated!.lastName,
+        enabled: updated!.enabled,
+        roles: (updated!.userRoles ?? []).map((r) => r.roleId),
+      }, 'User updated successfully'));
+    } catch (error) {
+      console.error('Error updating user enabled:', error);
+      res.status(500).json(formatErrorResponse('Internal server error', 500));
+    }
+  }
+
+  /**
+   * Actualiza los roles asociados a un usuario (solo superadmin)
    */
   async updateUserRoles(req: Request, res: Response): Promise<void> {
     const { userId } = req.params;
@@ -102,26 +201,22 @@ export class AdminController {
       return;
     }
 
-    if (!Array.isArray(roles)) {
-      res.status(400).json(formatErrorResponse('Roles must be provided as an array', 400));
-      return;
-    }
-
-    if (!roles.every((role: unknown) => typeof role === 'string')) {
-      res.status(400).json(formatErrorResponse('Roles must be strings', 400));
+    if (!Array.isArray(roles) || !roles.every((r: unknown) => typeof r === 'string')) {
+      res.status(400).json(formatErrorResponse('roles must be an array of strings', 400));
       return;
     }
 
     const roleList = roles as string[];
-    const validRoles = new Set(Object.values(Roles));
-    const invalidRoles = roleList.filter((role) => !validRoles.has(role));
-
+    // Solo se permite asignar/quitar el rol 'admin'
+    const invalidRoles = roleList.filter((r) => r !== Roles.ADMIN);
     if (invalidRoles.length > 0) {
-      res.status(400).json(formatErrorResponse(`Invalid roles: ${invalidRoles.join(', ')}`, 400));
+      res.status(400).json(formatErrorResponse(`Only the 'admin' role can be assigned: invalid roles: ${invalidRoles.join(', ')}`, 400));
       return;
     }
 
-    const requesterSub = typeof req.user === 'object' && req.user ? (req.user as { sub?: string }).sub : undefined;
+    const requesterSub = typeof req.user === 'object' && req.user
+      ? (req.user as { sub?: string }).sub
+      : undefined;
 
     if (!requesterSub) {
       res.status(401).json(formatErrorResponse('Requester not authenticated', 401));
@@ -129,12 +224,12 @@ export class AdminController {
     }
 
     try {
-      const [user, requester] = await Promise.all([
+      const [target, requester] = await Promise.all([
         userService.findById(userId),
         userService.findBySub(requesterSub),
       ]);
 
-      if (!user) {
+      if (!target) {
         res.status(404).json(formatErrorResponse('User not found', 404));
         return;
       }
@@ -149,33 +244,28 @@ export class AdminController {
         return;
       }
 
-      const targetIsAdmin = (user.userRoles ?? []).some((role) => role.roleId === Roles.ADMIN);
+      const targetRoles = (target.userRoles ?? []).map((r) => r.roleId);
 
-      if (targetIsAdmin) {
-        res.status(403).json(formatErrorResponse('You cannot modify roles of another admin', 403));
+      if (targetRoles.includes(Roles.SUPERADMIN)) {
+        res.status(403).json(formatErrorResponse('Cannot modify roles of a superadmin', 403));
         return;
       }
 
       const userRolesRepository = AppDataSource.getRepository(UserRoles);
 
+      // Reemplazar roles (mantener superadmin si lo tuviera, aunque el check anterior lo impide)
       await userRolesRepository.delete({ userId });
 
       const uniqueRoles = Array.from(new Set(roleList));
-
       if (uniqueRoles.length > 0) {
-        const userRoleEntities = uniqueRoles.map((roleId) =>
-          userRolesRepository.create({ userId, roleId })
-        );
-        await userRolesRepository.save(userRoleEntities);
+        const entities = uniqueRoles.map((roleId) => userRolesRepository.create({ userId, roleId }));
+        await userRolesRepository.save(entities);
       }
 
       const updatedUser = await userService.findById(userId);
-      const updatedRoles = (updatedUser?.userRoles ?? []).map((userRole) => userRole.roleId);
+      const updatedRoles = (updatedUser?.userRoles ?? []).map((r) => r.roleId);
 
-      res.status(200).json(formatSuccessResponse({
-        userId,
-        roles: updatedRoles,
-      }, 'User roles updated successfully'));
+      res.status(200).json(formatSuccessResponse({ userId, roles: updatedRoles }, 'User roles updated successfully'));
     } catch (error) {
       console.error('Error updating user roles:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));

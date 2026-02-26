@@ -2,7 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import { API_CONFIG, API_ENDPOINTS } from '@/config/api';
 import { cacheService } from './cacheService';
 import { CACHE_KEYS } from '@/config/cache';
-import type { ApiResponse, User, UserProfile, Submission, SubmissionResponse, SubmissionForm, GuideWithExercises, UserStatus, CSVUploadResult, AdminGuide } from '@/types';
+import type { ApiResponse, User, UserProfile, Submission, SubmissionResponse, SubmissionForm, GuideWithExercises, UserStatus, CSVUploadResult, AdminGuide, ExerciseRankingsData, AdminUser } from '@/types';
 
 const AUTH_TOKEN_KEY = 'auth_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
@@ -99,15 +99,20 @@ class ApiService {
     return response.data;
   }
 
+  async updateProfile(data: { firstName: string; lastName: string }): Promise<ApiResponse<UserProfile>> {
+    const response = await this.api.patch(API_ENDPOINTS.users.updateMe, data);
+    return response.data;
+  }
+
   // Submission endpoints
   async submitSolution(formData: SubmissionForm): Promise<ApiResponse<SubmissionResponse>> {
     const response = await this.api.post(API_ENDPOINTS.submissions.submit, formData);
-    
+
     // Invalidar caché relacionado después de submit exitoso
     if (response.data.success) {
       this.invalidateUserCache();
     }
-    
+
     return response.data;
   }
 
@@ -123,6 +128,12 @@ class ApiService {
 
   async getSubmissionStatus(id: string): Promise<ApiResponse<SubmissionResponse>> {
     const response = await this.api.get(API_ENDPOINTS.submissions.status(id));
+    return response.data;
+  }
+
+  async getExerciseRankings(guideNumber: number, exerciseNumber: number): Promise<ApiResponse<ExerciseRankingsData>> {
+    const response = await this.api.get(API_ENDPOINTS.submissions.rankings(guideNumber, exerciseNumber));
+    console.log(response.data);
     return response.data;
   }
 
@@ -161,18 +172,33 @@ class ApiService {
   async uploadCSV(file: File): Promise<ApiResponse<CSVUploadResult>> {
     const formData = new FormData();
     formData.append('csv', file);
-    
+
     const response = await this.api.post(API_ENDPOINTS.admin.uploadCSV, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
-    
+
     return response.data;
   }
 
   async getUserStatus(): Promise<ApiResponse<UserStatus>> {
     const response = await this.api.get(API_ENDPOINTS.admin.userStatus);
+    return response.data;
+  }
+
+  async getAdminUsers(): Promise<ApiResponse<AdminUser[]>> {
+    const response = await this.api.get(API_ENDPOINTS.admin.users);
+    return response.data;
+  }
+
+  async updateUserEnabled(userId: string, enabled: boolean): Promise<ApiResponse<AdminUser>> {
+    const response = await this.api.patch(API_ENDPOINTS.admin.userEnabled(userId), { enabled });
+    return response.data;
+  }
+
+  async updateUserRoles(userId: string, roles: string[]): Promise<ApiResponse<{ userId: string; roles: string[] }>> {
+    const response = await this.api.put(API_ENDPOINTS.admin.userRoles(userId), { roles });
     return response.data;
   }
 
