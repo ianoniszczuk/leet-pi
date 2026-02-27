@@ -2,6 +2,8 @@ import { parse } from 'csv-parse/sync';
 import userService from './userService.ts';
 import userDAO from '../persistence/user.dao.ts';
 import { User } from '../entities/user.entity.ts';
+import { Roles } from '../entities/roles.enum.ts';
+
 
 export interface SyncResult {
   enabledCount: number;
@@ -64,7 +66,7 @@ export class CSVUserService {
           // Normalizar email para búsqueda
           const normalizedEmail = email.toLowerCase().trim();
           let user = await userDAO.findByEmail(normalizedEmail);
-          
+
           if (!user) {
             // Crear usuario si no existe (con enabled = true)
             user = await userDAO.findByEmailOrCreate(normalizedEmail, {
@@ -89,7 +91,11 @@ export class CSVUserService {
       const emailsToDisable: string[] = [];
 
       for (const user of allUsers) {
-        if (user.enabled && !emailsInCSV.has(user.email.toLowerCase())) {
+        const isAdminOrSuper = user.userRoles?.some(
+          (ur) => ur.roleId === Roles.ADMIN || ur.roleId === Roles.SUPERADMIN
+        );
+
+        if (user.enabled && !emailsInCSV.has(user.email.toLowerCase()) && !isAdminOrSuper) {
           emailsToDisable.push(user.email);
         }
       }
