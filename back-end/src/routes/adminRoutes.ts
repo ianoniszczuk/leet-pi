@@ -27,6 +27,7 @@ const ac = adminController;
 router.get('/users', requireAdmin, ac.getUserList.bind(ac));
 router.post('/users/upload-csv', requireAdmin, upload.single('csv'), ac.uploadCSV.bind(ac));
 router.get('/users/status', requireAdmin, ac.getUserStatus.bind(ac));
+router.get('/users/:userId/details', requireAdmin, ac.getUserDetails.bind(ac));
 router.patch('/users/:userId/enabled', requireAdmin, ac.updateUserEnabled.bind(ac));
 router.put('/users/:userId/roles', requireSuperAdmin, ac.updateUserRoles.bind(ac));
 

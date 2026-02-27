@@ -32,6 +32,7 @@ const adminEndpoints = {
   users: '/admin/users',
   userEnabled: (id: string) => `/admin/users/${id}/enabled`,
   userRoles: (id: string) => `/admin/users/${id}/roles`,
+  userDetails: (id: string) => `/admin/users/${id}/details`,
   guide: (n?: number) => (n !== undefined ? `/admin/guides/${n}` : '/admin/guides'),
   exercise: (g: number, e?: number) => (e !== undefined ? `/admin/guides/${g}/exercises/${e}` : `/admin/guides/${g}/exercises`),
 };

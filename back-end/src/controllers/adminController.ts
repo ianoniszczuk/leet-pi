@@ -8,6 +8,8 @@ import { UserRoles } from '../entities/user-roles.entity.ts';
 import { Roles } from '../entities/roles.enum.ts';
 import { Guide } from '../entities/guide.entity.ts';
 import { Exercise } from '../entities/exercise.entity.ts';
+import { Try } from '../entities/try.view.ts';
+import { Submission } from '../entities/submission.entity.ts';
 
 function parsePositiveInt(value: unknown): number | null {
   const n = Number(value);
@@ -521,6 +523,70 @@ export class AdminController {
       }, 'Exercise updated successfully'));
     } catch (error) {
       console.error('Error updating exercise:', error);
+      res.status(500).json(formatErrorResponse('Internal server error', 500));
+    }
+  }
+
+  /**
+   * Devuelve el detalle de progreso de un usuario (ejercicios intentados y resueltos por guía)
+   */
+  async getUserDetails(req: Request, res: Response): Promise<void> {
+    const { userId } = req.params;
+
+    if (!userId) {
+      res.status(400).json(formatErrorResponse('User ID is required', 400));
+      return;
+    }
+
+    try {
+      const user = await userService.findById(userId);
+      if (!user) {
+        res.status(404).json(formatErrorResponse('User not found', 404));
+        return;
+      }
+
+      const guideRepository = AppDataSource.getRepository(Guide);
+      const [guides, tries, lastSub] = await Promise.all([
+        guideRepository.find({ relations: ['exercises'], order: { guideNumber: 'ASC' } }),
+        AppDataSource.getRepository(Try).find({ where: { userId } }),
+        AppDataSource.getRepository(Submission)
+          .createQueryBuilder('s')
+          .select('MAX(s.createdAt)', 'lastSubmissionAt')
+          .where('s.userId = :userId', { userId })
+          .getRawOne(),
+      ]);
+
+      const triesMap = new Map<string, Try>();
+      for (const t of tries) {
+        triesMap.set(`${t.guideNumber}-${t.exerciseNumber}`, t);
+      }
+
+      const result = {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        lastSubmissionAt: (lastSub?.lastSubmissionAt as string | null) ?? null,
+        guides: guides.map((g) => ({
+          guideNumber: g.guideNumber,
+          enabled: g.enabled,
+          exercises: (g.exercises ?? [])
+            .sort((a, b) => a.exerciseNumber - b.exerciseNumber)
+            .map((e) => {
+              const t = triesMap.get(`${e.guideNumber}-${e.exerciseNumber}`);
+              return {
+                exerciseNumber: e.exerciseNumber,
+                enabled: e.enabled,
+                attempted: t !== undefined,
+                solved: t?.success ?? false,
+              };
+            }),
+        })),
+      };
+
+      res.status(200).json(formatSuccessResponse(result, 'User details retrieved successfully'));
+    } catch (error) {
+      console.error('Error getting user details:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));
     }
   }

@@ -171,3 +171,25 @@ export interface AdminGuide {
   deadline: string | null;
   exercises: AdminExercise[];
 }
+
+export interface UserDetailExercise {
+  exerciseNumber: number;
+  enabled: boolean;
+  attempted: boolean;
+  solved: boolean;
+}
+
+export interface UserDetailGuide {
+  guideNumber: number;
+  enabled: boolean;
+  exercises: UserDetailExercise[];
+}
+
+export interface UserDetailData {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  lastSubmissionAt: string | null;
+  guides: UserDetailGuide[];
+}

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Loader2, AlertCircle, ShieldCheck, Shield, User as UserIcon, CheckCircle, XCircle } from 'lucide-react';
 import { apiService } from '@/services/api';
 import type { AdminUser } from '@/types';
+import UserDetailModal from './UserDetailModal';
 
 interface UsersTabProps {
   currentUserRoles: string[];
@@ -51,6 +52,7 @@ export default function UsersTab({ currentUserRoles }: UsersTabProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
 
   const isSuperAdmin = currentUserRoles.includes('superadmin');
 
@@ -168,6 +170,7 @@ export default function UsersTab({ currentUserRoles }: UsersTabProps) {
   }
 
   return (
+    <>
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
       <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900">
@@ -202,7 +205,12 @@ export default function UsersTab({ currentUserRoles }: UsersTabProps) {
               return (
                 <tr key={u.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {u.firstName} {u.lastName}
+                    <button
+                      onClick={() => setSelectedUser(u)}
+                      className="text-left text-gray-600 cursor-pointer"
+                    >
+                      {u.firstName} {u.lastName}
+                    </button>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{u.email}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -268,5 +276,13 @@ export default function UsersTab({ currentUserRoles }: UsersTabProps) {
         </table>
       </div>
     </div>
+
+      <UserDetailModal
+        isOpen={selectedUser !== null}
+        userId={selectedUser?.id ?? null}
+        userRoles={selectedUser?.roles ?? []}
+        onClose={() => setSelectedUser(null)}
+      />
+    </>
   );
 }
