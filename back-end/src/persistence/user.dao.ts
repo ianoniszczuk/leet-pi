@@ -150,6 +150,67 @@ export class UserDAO {
   }
 
   /**
+   * Obtiene usuarios con búsqueda y paginación combinadas
+   * @param search - Término de búsqueda (opcional) sobre firstName, lastName y email
+   * @param page - Número de página (empezando en 1)
+   * @param limit - Cantidad de usuarios por página
+   * @returns Promise<{ users: User[], total: number, page: number, totalPages: number }>
+   */
+  async findWithSearchAndPagination(
+    search: string = '',
+    page: number = 1,
+    limit: number = 10,
+    role?: string,
+    enabled?: boolean,
+  ): Promise<{
+    users: User[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
+    const qb = this.repository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.userRoles', 'userRoles')
+      .orderBy('user.firstName', 'ASC')
+      .addOrderBy('user.lastName', 'ASC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const conditions: string[] = [];
+    const params: Record<string, unknown> = {};
+
+    if (search.trim()) {
+      conditions.push('(user.firstName ILIKE :term OR user.lastName ILIKE :term OR user.email ILIKE :term)');
+      params.term = `%${search.trim()}%`;
+    }
+
+    if (role === 'alumno') {
+      conditions.push('userRoles.roleId IS NULL');
+    } else if (role) {
+      conditions.push('userRoles.roleId = :role');
+      params.role = role;
+    }
+
+    if (enabled !== undefined) {
+      conditions.push('user.enabled = :enabled');
+      params.enabled = enabled;
+    }
+
+    if (conditions.length > 0) {
+      qb.where(conditions.join(' AND '), params);
+    }
+
+    const [users, total] = await qb.getManyAndCount();
+
+    return {
+      users,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  /**
    * Busca usuarios por nombre (firstName o lastName)
    * @param searchTerm - Término de búsqueda
    * @returns Promise<User[]>

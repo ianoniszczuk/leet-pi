@@ -145,6 +145,13 @@ export interface AdminUser {
   roles: string[];
 }
 
+export interface PaginatedAdminUsersResponse {
+  users: AdminUser[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
 export interface UserStatus {
   total: number;
   enabled: number;

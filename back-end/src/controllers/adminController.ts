@@ -93,11 +93,21 @@ export class AdminController {
   }
 
   /**
-   * Devuelve el listado de todos los usuarios con sus roles
+   * Devuelve el listado de usuarios con búsqueda y paginación
    */
   async getUserList(req: Request, res: Response): Promise<void> {
+    const search = typeof req.query.search === 'string' ? req.query.search : '';
+    const page = Math.max(1, parseInt(String(req.query.page ?? '1'), 10) || 1);
+    const limit = Math.max(1, parseInt(String(req.query.limit ?? '10'), 10) || 10);
+
+    const rawRole = typeof req.query.role === 'string' ? req.query.role : undefined;
+    const role = rawRole && ['admin', 'superadmin', 'alumno'].includes(rawRole) ? rawRole : undefined;
+
+    const rawEnabled = typeof req.query.enabled === 'string' ? req.query.enabled : undefined;
+    const enabled = rawEnabled === 'true' ? true : rawEnabled === 'false' ? false : undefined;
+
     try {
-      const users = await userDAO.findAll();
+      const { users, total, totalPages } = await userDAO.findWithSearchAndPagination(search, page, limit, role, enabled);
       const result = users.map((u) => ({
         id: u.id,
         email: u.email,
@@ -106,7 +116,7 @@ export class AdminController {
         enabled: u.enabled,
         roles: (u.userRoles ?? []).map((r) => r.roleId),
       }));
-      res.status(200).json(formatSuccessResponse(result, 'Users retrieved successfully'));
+      res.status(200).json(formatSuccessResponse({ users: result, total, page, totalPages }, 'Users retrieved successfully'));
     } catch (error) {
       console.error('Error getting user list:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));

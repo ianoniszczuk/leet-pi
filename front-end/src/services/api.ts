@@ -2,7 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import { API_CONFIG, API_ENDPOINTS } from '@/config/api';
 import { cacheService } from './cacheService';
 import { CACHE_KEYS } from '@/config/cache';
-import type { ApiResponse, User, UserProfile, Submission, SubmissionResponse, SubmissionForm, GuideWithExercises, UserStatus, CSVUploadResult, AdminGuide, ExerciseRankingsData, AdminUser, UserDetailData } from '@/types';
+import type { ApiResponse, User, UserProfile, Submission, SubmissionResponse, SubmissionForm, GuideWithExercises, UserStatus, CSVUploadResult, AdminGuide, ExerciseRankingsData, AdminUser, UserDetailData, PaginatedAdminUsersResponse } from '@/types';
 
 const AUTH_TOKEN_KEY = 'auth_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
@@ -187,8 +187,8 @@ class ApiService {
     return response.data;
   }
 
-  async getAdminUsers(): Promise<ApiResponse<AdminUser[]>> {
-    const response = await this.api.get(API_ENDPOINTS.admin.users);
+  async getAdminUsers(params?: { search?: string; page?: number; limit?: number; role?: string; enabled?: boolean }): Promise<ApiResponse<PaginatedAdminUsersResponse>> {
+    const response = await this.api.get(API_ENDPOINTS.admin.users, { params });
     return response.data;
   }
 
