@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import Editor from '@monaco-editor/react';
+import { useState, useEffect, useRef } from 'react';
+import Editor, { type OnMount } from '@monaco-editor/react';
 import { Code2, AlertCircle, CheckCircle, Play, Clock, HardDrive, TestTube, Terminal } from 'lucide-react';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import SessionExpiredModal from '@/components/ui/SessionExpiredModal';
@@ -8,49 +8,56 @@ import { useSubmission } from '@/hooks/useApi';
 import { useCachedAvailableExercises } from '@/hooks/useCachedApi';
 import type { SubmissionResponse } from '@/types';
 
-export default function SubmitCode() {
-  const [formData, setFormData] = useState({
-    exerciseNumber: 1,
-    guideNumber: 1,
-    code: `#include <stdio.h>
+const DEFAULT_CODE = `#include <stdio.h>
 
 int main() {
     // Tu código aquí
     printf("Hello, World!\\n");
     return 0;
-}`,
-  });
+}`;
+
+const getStorageKey = (guideNumber: number, exerciseNumber: number) =>
+  `leet-pi-code-g${guideNumber}-e${exerciseNumber}`;
+
+const getSavedCode = (guideNumber: number, exerciseNumber: number) =>
+  localStorage.getItem(getStorageKey(guideNumber, exerciseNumber)) ?? DEFAULT_CODE;
+
+export default function SubmitCode() {
+  const [formData, setFormData] = useState(() => ({
+    exerciseNumber: 1,
+    guideNumber: 1,
+    code: getSavedCode(1, 1),
+  }));
   const [result, setResult] = useState<SubmissionResponse | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [showSessionExpiredModal, setShowSessionExpiredModal] = useState(false);
   const [rankingsRefreshKey, setRankingsRefreshKey] = useState(0);
+  const handleSubmitRef = useRef<() => void>(() => {});
   const { submitSolution, loading, error } = useSubmission();
   const { data: availableExercises, loading: exercisesLoading, error: exercisesError } = useCachedAvailableExercises();
-
-  // Load saved code from localStorage on component mount
-  useEffect(() => {
-    const savedCode = localStorage.getItem('leet-pi-saved-code');
-    if (savedCode) {
-      setFormData(prev => ({ ...prev, code: savedCode }));
-    }
-  }, []);
 
   // Update form data when available exercises are loaded
   useEffect(() => {
     if (!availableExercises || availableExercises.length === 0) return;
     const firstGuide = availableExercises.find(g => g.exercises.length > 0);
     if (!firstGuide) return;
+    const newGuide = firstGuide.guideNumber;
+    const newExercise = firstGuide.exercises[0].exerciseNumber;
     setFormData(prev => ({
       ...prev,
-      guideNumber: firstGuide.guideNumber,
-      exerciseNumber: firstGuide.exercises[0].exerciseNumber,
+      guideNumber: newGuide,
+      exerciseNumber: newExercise,
+      code: getSavedCode(newGuide, newExercise),
     }));
   }, [availableExercises]);
 
-  // Save code to localStorage whenever it changes
+  // Save code to localStorage keyed by exercise whenever it changes
   useEffect(() => {
-    localStorage.setItem('leet-pi-saved-code', formData.code);
-  }, [formData.code]);
+    localStorage.setItem(
+      getStorageKey(formData.guideNumber, formData.exerciseNumber),
+      formData.code,
+    );
+  }, [formData.guideNumber, formData.exerciseNumber, formData.code]);
 
   // Detectar errores de sesión expirada
   useEffect(() => {
@@ -93,6 +100,11 @@ int main() {
         }
       }
 
+      // When guide or exercise changes, load the saved code for that exercise
+      if (field === 'guideNumber' || field === 'exerciseNumber') {
+        newData.code = getSavedCode(newData.guideNumber, newData.exerciseNumber);
+      }
+
       return newData;
     });
   };
@@ -101,7 +113,18 @@ int main() {
   const currentGuide = availableExercises?.find(g => g.guideNumber === formData.guideNumber);
   const currentExercises = currentGuide?.exercises || [];
 
-  // Keyboard shortcut for submit (Ctrl+Enter)
+  // Keep ref updated so the Monaco command always calls the latest handleSubmit
+  handleSubmitRef.current = handleSubmit;
+
+  // Monaco onMount: register Ctrl+Enter inside the editor
+  const handleEditorMount: OnMount = (editor, monaco) => {
+    editor.addCommand(
+      monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
+      () => handleSubmitRef.current(),
+    );
+  };
+
+  // Keyboard shortcut for submit (Ctrl+Enter) when focus is outside Monaco
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === 'Enter') {
@@ -268,6 +291,7 @@ int main() {
                     theme="vs-dark"
                     value={formData.code}
                     onChange={(value: string | undefined) => handleInputChange('code', value ?? '')}
+                    onMount={handleEditorMount}
                     loading={
                       <div className="flex items-center justify-center h-full bg-gray-900">
                         <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
