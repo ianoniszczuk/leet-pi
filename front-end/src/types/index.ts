@@ -98,6 +98,7 @@ export interface SubmissionForm {
 export interface AvailableExercise {
   exerciseNumber: number;
   enabled: boolean;
+  functionSignature?: string | null;
 }
 
 export interface GuideWithExercises {
@@ -170,6 +171,7 @@ export interface AdminExercise {
   guideNumber: number;
   exerciseNumber: number;
   enabled: boolean;
+  functionSignature?: string | null;
 }
 
 export interface AdminGuide {

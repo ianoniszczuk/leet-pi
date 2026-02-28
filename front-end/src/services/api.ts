@@ -228,12 +228,12 @@ class ApiService {
     return response.data;
   }
 
-  async createExercise(g: number, data: { exerciseNumber: number; enabled?: boolean }): Promise<ApiResponse> {
+  async createExercise(g: number, data: { exerciseNumber: number; enabled?: boolean; functionSignature?: string | null }): Promise<ApiResponse> {
     const response = await this.api.post(API_ENDPOINTS.admin.exercise(g), data);
     return response.data;
   }
 
-  async updateExercise(g: number, e: number, data: { enabled: boolean }): Promise<ApiResponse> {
+  async updateExercise(g: number, e: number, data: { enabled?: boolean; functionSignature?: string | null }): Promise<ApiResponse> {
     const response = await this.api.patch(API_ENDPOINTS.admin.exercise(g, e), data);
     return response.data;
   }

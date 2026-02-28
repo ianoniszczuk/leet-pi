@@ -353,6 +353,7 @@ class SubmissionController {
         exercises: (guide.exercises ?? []).map((exercise) => ({
           exerciseNumber: exercise.exerciseNumber,
           enabled: exercise.enabled,
+          functionSignature: exercise.functionSignature ?? null,
         })),
       }));
 

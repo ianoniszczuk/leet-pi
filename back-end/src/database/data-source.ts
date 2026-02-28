@@ -7,6 +7,7 @@ import { UserRolesDeadlineEnabledSession1762463659656 } from '../migrations/1762
 import { ChangeEnabledDefaultToFalse1762464439246 } from '../migrations/1762464439246-change-enabled-default-to-false.ts';
 import { MakeSubNullable1762464552974 } from '../migrations/1762464552974-make-sub-nullable.ts';
 import { DeadlineNullable1740441600000 } from '../migrations/1740441600000-deadline-nullable.ts';
+import { AddFunctionSignatureToExercise1772245234876 } from '../migrations/1772245234876-add-function-signature-to-exercise.ts';
 
 dotenv.config();
 
@@ -28,6 +29,7 @@ const dataSourceOptions: DataSourceOptions = {
     ChangeEnabledDefaultToFalse1762464439246,
     MakeSubNullable1762464552974,
     DeadlineNullable1740441600000,
+    AddFunctionSignatureToExercise1772245234876,
   ],
 }
 

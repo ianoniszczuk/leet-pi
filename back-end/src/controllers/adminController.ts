@@ -305,6 +305,7 @@ export class AdminController {
             guideNumber: e.guideNumber,
             exerciseNumber: e.exerciseNumber,
             enabled: e.enabled,
+            functionSignature: e.functionSignature ?? null,
           })),
       }));
 
@@ -450,7 +451,7 @@ export class AdminController {
    */
   async createExercise(req: Request, res: Response): Promise<void> {
     const { guideNumber } = req.params;
-    const { exerciseNumber, enabled } = req.body ?? {};
+    const { exerciseNumber, enabled, functionSignature } = req.body ?? {};
 
     const parsedGuideNumber = parsePositiveInt(guideNumber);
     const parsedExerciseNumber = parsePositiveInt(exerciseNumber);
@@ -480,6 +481,7 @@ export class AdminController {
         guideNumber: parsedGuideNumber,
         exerciseNumber: parsedExerciseNumber,
         enabled: typeof enabled === 'boolean' ? enabled : false,
+        functionSignature: typeof functionSignature === 'string' && functionSignature.trim() ? functionSignature.trim() : null,
       });
 
       const savedExercise = await exerciseRepository.save(exercise);
@@ -488,6 +490,7 @@ export class AdminController {
         guideNumber: savedExercise.guideNumber,
         exerciseNumber: savedExercise.exerciseNumber,
         enabled: savedExercise.enabled,
+        functionSignature: savedExercise.functionSignature ?? null,
       }, 'Exercise created successfully'));
     } catch (error) {
       console.error('Error creating exercise:', error);
@@ -500,15 +503,20 @@ export class AdminController {
    */
   async updateExercise(req: Request, res: Response): Promise<void> {
     const { guideNumber, exerciseNumber } = req.params;
-    const { enabled } = req.body ?? {};
+    const { enabled, functionSignature } = req.body ?? {};
 
     const parsedGuideNumber = parsePositiveInt(guideNumber);
     const parsedExerciseNumber = parsePositiveInt(exerciseNumber);
     if (parsedGuideNumber === null) { rejectBadGuideNumber(res); return; }
     if (parsedExerciseNumber === null) { rejectBadExerciseNumber(res); return; }
 
-    if (typeof enabled !== 'boolean') {
-      res.status(400).json(formatErrorResponse('Enabled must be provided as a boolean', 400));
+    if (enabled === undefined && functionSignature === undefined) {
+      res.status(400).json(formatErrorResponse('At least one of enabled or functionSignature must be provided', 400));
+      return;
+    }
+
+    if (enabled !== undefined && typeof enabled !== 'boolean') {
+      res.status(400).json(formatErrorResponse('Enabled must be a boolean value', 400));
       return;
     }
 
@@ -523,13 +531,20 @@ export class AdminController {
         return;
       }
 
-      exercise.enabled = enabled;
+      if (enabled !== undefined) exercise.enabled = enabled;
+      if (functionSignature !== undefined) {
+        exercise.functionSignature = typeof functionSignature === 'string' && functionSignature.trim()
+          ? functionSignature.trim()
+          : null;
+      }
+
       const savedExercise = await exerciseRepository.save(exercise);
 
       res.status(200).json(formatSuccessResponse({
         guideNumber: savedExercise.guideNumber,
         exerciseNumber: savedExercise.exerciseNumber,
         enabled: savedExercise.enabled,
+        functionSignature: savedExercise.functionSignature ?? null,
       }, 'Exercise updated successfully'));
     } catch (error) {
       console.error('Error updating exercise:', error);

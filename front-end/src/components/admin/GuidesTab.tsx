@@ -126,22 +126,27 @@ function GuideModal({ initial, onSave, onCancel, loading }: GuideModalProps) {
 
 interface ExerciseModalProps {
   guideNumber: number;
-  onSave: (data: { exerciseNumber: number; enabled: boolean }) => Promise<void>;
+  onSave: (data: { exerciseNumber: number; enabled: boolean; functionSignature?: string | null }) => Promise<void>;
   onCancel: () => void;
   loading: boolean;
 }
 
 function ExerciseModal({ guideNumber, onSave, onCancel, loading }: ExerciseModalProps) {
   const [exerciseNumber, setExerciseNumber] = useState('');
+  const [functionSignature, setFunctionSignature] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({ exerciseNumber: Number(exerciseNumber), enabled: false });
+    onSave({
+      exerciseNumber: Number(exerciseNumber),
+      enabled: false,
+      functionSignature: functionSignature.trim() || null,
+    });
   };
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full mx-4">
+      <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Nuevo Ejercicio — Guía {guideNumber}</h3>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -150,7 +155,56 @@ function ExerciseModal({ guideNumber, onSave, onCancel, loading }: ExerciseModal
               onChange={e => setExerciseNumber(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Firma de función (opcional)</label>
+            <textarea
+              value={functionSignature}
+              onChange={e => setFunctionSignature(e.target.value)}
+              placeholder="int sum(int a, int b)"
+              rows={2}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
+            <p className="text-xs text-gray-400 mt-1">Se mostrará como plantilla inicial en el editor para los alumnos.</p>
+          </div>
           <ModalFooter onCancel={onCancel} loading={loading} confirmLabel="Crear" />
+        </form>
+      </div>
+    </div>
+  );
+}
+
+interface EditExerciseModalProps {
+  exercise: AdminExercise;
+  onSave: (data: { functionSignature: string | null }) => Promise<void>;
+  onCancel: () => void;
+  loading: boolean;
+}
+
+function EditExerciseModal({ exercise, onSave, onCancel, loading }: EditExerciseModalProps) {
+  const [functionSignature, setFunctionSignature] = useState(exercise.functionSignature ?? '');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave({ functionSignature: functionSignature.trim() || null });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          Editar Ejercicio {exercise.exerciseNumber} — Guía {exercise.guideNumber}
+        </h3>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Firma de función</label>
+            <textarea
+              value={functionSignature}
+              onChange={e => setFunctionSignature(e.target.value)}
+              placeholder="int sum(int a, int b)"
+              rows={2}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
+            <p className="text-xs text-gray-400 mt-1">Se mostrará como plantilla inicial en el editor. Dejar vacío para usar Hello World.</p>
+          </div>
+          <ModalFooter onCancel={onCancel} loading={loading} confirmLabel="Guardar" />
         </form>
       </div>
     </div>
@@ -163,9 +217,10 @@ interface ExerciseRowProps {
   exercise: AdminExercise;
   onToggle: (e: AdminExercise) => Promise<void>;
   onDelete: (e: AdminExercise) => void;
+  onEdit: (e: AdminExercise) => void;
 }
 
-function ExerciseRow({ exercise, onToggle, onDelete }: ExerciseRowProps) {
+function ExerciseRow({ exercise, onToggle, onDelete, onEdit }: ExerciseRowProps) {
   const [toggling, setToggling] = useState(false);
 
   const handleToggle = async () => {
@@ -182,12 +237,21 @@ function ExerciseRow({ exercise, onToggle, onDelete }: ExerciseRowProps) {
         <span className={`text-xs px-2 py-0.5 rounded-full ${exercise.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
           {exercise.enabled ? 'Habilitado' : 'Deshabilitado'}
         </span>
+        {exercise.functionSignature && (
+          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-mono" title={exercise.functionSignature}>
+            fn
+          </span>
+        )}
       </div>
       <div className="flex items-center gap-2">
         <button onClick={handleToggle} disabled={toggling}
           title={exercise.enabled ? 'Deshabilitar' : 'Habilitar'}
           className="text-xs px-3 py-1 rounded-lg border border-gray-300 hover:bg-gray-100 text-gray-600 transition-colors flex items-center gap-1">
           {toggling ? <Loader2 className="w-3 h-3 animate-spin" /> : (exercise.enabled ? '○ Deshabilitar' : '● Habilitar')}
+        </button>
+        <button onClick={() => onEdit(exercise)} title="Editar firma de función"
+          className="p-1 text-gray-400 hover:text-primary-600 transition-colors">
+          <Pencil className="w-4 h-4" />
         </button>
         <button onClick={() => onDelete(exercise)} title="Eliminar ejercicio"
           className="p-1 text-red-400 hover:text-red-600 transition-colors">
@@ -206,6 +270,7 @@ interface GuideRowHandlers {
   onToggle: (g: AdminGuide) => Promise<void>;
   onToggleExercise: (g: AdminGuide, e: AdminExercise) => Promise<void>;
   onDeleteExercise: (g: AdminGuide, e: AdminExercise) => void;
+  onEditExercise: (g: AdminGuide, e: AdminExercise) => void;
   onAddExercise: (g: AdminGuide) => void;
 }
 
@@ -277,6 +342,7 @@ function GuideRow({ guide, handlers }: GuideRowProps) {
                   exercise={ex}
                   onToggle={e => handlers.onToggleExercise(guide, e)}
                   onDelete={e => handlers.onDeleteExercise(guide, e)}
+                  onEdit={e => handlers.onEditExercise(guide, e)}
                 />
               ))}
             </div>
@@ -296,7 +362,8 @@ type DeleteTarget =
 type Modal =
   | { type: 'newGuide' }
   | { type: 'editGuide'; guide: AdminGuide }
-  | { type: 'newExercise'; guide: AdminGuide };
+  | { type: 'newExercise'; guide: AdminGuide }
+  | { type: 'editExercise'; guide: AdminGuide; exercise: AdminExercise };
 
 export default function GuidesTab() {
   const [guides, setGuides] = useState<AdminGuide[]>([]);
@@ -347,9 +414,15 @@ export default function GuidesTab() {
   const handleToggleGuide = (guide: AdminGuide) =>
     withAction(() => apiService.updateGuide(guide.guideNumber, { enabled: !guide.enabled }));
 
-  const handleSaveExercise = async (data: { exerciseNumber: number; enabled: boolean }) => {
+  const handleSaveExercise = async (data: { exerciseNumber: number; enabled: boolean; functionSignature?: string | null }) => {
     if (modal?.type !== 'newExercise') return;
     await withAction(() => apiService.createExercise(modal.guide.guideNumber, data));
+    setModal(null);
+  };
+
+  const handleEditExerciseSave = async (data: { functionSignature: string | null }) => {
+    if (modal?.type !== 'editExercise') return;
+    await withAction(() => apiService.updateExercise(modal.guide.guideNumber, modal.exercise.exerciseNumber, data));
     setModal(null);
   };
 
@@ -378,6 +451,7 @@ export default function GuidesTab() {
     onToggle: handleToggleGuide,
     onToggleExercise: handleToggleExercise,
     onDeleteExercise: (g, e) => setDeleteTarget({ type: 'exercise', guide: g, exercise: e }),
+    onEditExercise: (g, e) => setModal({ type: 'editExercise', guide: g, exercise: e }),
     onAddExercise: g => setModal({ type: 'newExercise', guide: g }),
   };
 
@@ -426,6 +500,9 @@ export default function GuidesTab() {
       )}
       {modal?.type === 'newExercise' && (
         <ExerciseModal guideNumber={modal.guide.guideNumber} onSave={handleSaveExercise} onCancel={() => setModal(null)} loading={actionLoading} />
+      )}
+      {modal?.type === 'editExercise' && (
+        <EditExerciseModal exercise={modal.exercise} onSave={handleEditExerciseSave} onCancel={() => setModal(null)} loading={actionLoading} />
       )}
       {deleteTarget && (
         <ConfirmDeleteModal message={deleteMessage} onConfirm={handleConfirmDelete} onCancel={() => setDeleteTarget(null)} loading={actionLoading} />

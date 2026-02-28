@@ -19,8 +19,13 @@ int main() {
 const getStorageKey = (guideNumber: number, exerciseNumber: number) =>
   `leet-pi-code-g${guideNumber}-e${exerciseNumber}`;
 
-const getSavedCode = (guideNumber: number, exerciseNumber: number) =>
-  localStorage.getItem(getStorageKey(guideNumber, exerciseNumber)) ?? DEFAULT_CODE;
+const getDefaultCode = (functionSignature?: string | null): string => {
+  if (!functionSignature?.trim()) return DEFAULT_CODE;
+  return `#include <stdio.h>\n\n${functionSignature.trim()} {\n    // Aquí debes escribir el código\n}`;
+};
+
+const getSavedCode = (guideNumber: number, exerciseNumber: number, functionSignature?: string | null): string =>
+  localStorage.getItem(getStorageKey(guideNumber, exerciseNumber)) ?? getDefaultCode(functionSignature);
 
 export default function SubmitCode() {
   const [formData, setFormData] = useState(() => ({
@@ -33,8 +38,22 @@ export default function SubmitCode() {
   const [showSessionExpiredModal, setShowSessionExpiredModal] = useState(false);
   const [rankingsRefreshKey, setRankingsRefreshKey] = useState(0);
   const handleSubmitRef = useRef<() => void>(() => {});
+  // Prevents the save effect from writing DEFAULT_CODE to localStorage before
+  // the exercises effect has had a chance to set the correct initial code
+  // (which may be a function signature template, not the Hello World fallback).
+  const codeInitializedRef = useRef(false);
   const { submitSolution, loading, error } = useSubmission();
   const { data: availableExercises, loading: exercisesLoading, error: exercisesError } = useCachedAvailableExercises();
+
+  // Save code to localStorage keyed by exercise whenever it changes.
+  // Blocked until exercises have loaded and set the real initial code.
+  useEffect(() => {
+    if (!codeInitializedRef.current) return;
+    localStorage.setItem(
+      getStorageKey(formData.guideNumber, formData.exerciseNumber),
+      formData.code,
+    );
+  }, [formData.guideNumber, formData.exerciseNumber, formData.code]);
 
   // Update form data when available exercises are loaded
   useEffect(() => {
@@ -42,22 +61,16 @@ export default function SubmitCode() {
     const firstGuide = availableExercises.find(g => g.exercises.length > 0);
     if (!firstGuide) return;
     const newGuide = firstGuide.guideNumber;
-    const newExercise = firstGuide.exercises[0].exerciseNumber;
+    const firstExercise = firstGuide.exercises[0];
+    const newExercise = firstExercise.exerciseNumber;
+    codeInitializedRef.current = true;
     setFormData(prev => ({
       ...prev,
       guideNumber: newGuide,
       exerciseNumber: newExercise,
-      code: getSavedCode(newGuide, newExercise),
+      code: getSavedCode(newGuide, newExercise, firstExercise.functionSignature),
     }));
   }, [availableExercises]);
-
-  // Save code to localStorage keyed by exercise whenever it changes
-  useEffect(() => {
-    localStorage.setItem(
-      getStorageKey(formData.guideNumber, formData.exerciseNumber),
-      formData.code,
-    );
-  }, [formData.guideNumber, formData.exerciseNumber, formData.code]);
 
   // Detectar errores de sesión expirada
   useEffect(() => {
@@ -102,7 +115,9 @@ export default function SubmitCode() {
 
       // When guide or exercise changes, load the saved code for that exercise
       if (field === 'guideNumber' || field === 'exerciseNumber') {
-        newData.code = getSavedCode(newData.guideNumber, newData.exerciseNumber);
+        const guide = availableExercises?.find(g => g.guideNumber === newData.guideNumber);
+        const exercise = guide?.exercises.find(e => e.exerciseNumber === newData.exerciseNumber);
+        newData.code = getSavedCode(newData.guideNumber, newData.exerciseNumber, exercise?.functionSignature);
       }
 
       return newData;
