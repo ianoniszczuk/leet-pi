@@ -4,7 +4,7 @@ export class AddFunctionSignatureToExercise1772245234876 implements MigrationInt
     name = 'AddFunctionSignatureToExercise1772245234876'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`ALTER TABLE "exercises" ADD "function_signature" text NOT NULL DEFAULT ''`);
+        await queryRunner.query(`ALTER TABLE "exercises" ADD "function_signature" text NULL DEFAULT ''`);
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {

@@ -42,18 +42,21 @@ export default function AuthButton({
     <div className={`flex items-center gap-3 ${className}`}>
       {/* User Info */}
       <div className="flex items-center gap-2 text-sm">
-        {user?.picture && (
+        {user?.picture ? (
           <img
             src={user.picture}
             alt="Avatar"
             className="w-8 h-8 rounded-full"
+            referrerPolicy="no-referrer"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+            }}
           />
-        )}
-        {!user?.picture && (
-          <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-            <User className="w-4 h-4 text-primary-600" />
-          </div>
-        )}
+        ) : null}
+        <div className={`w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center ${user?.picture ? 'hidden' : ''}`}>
+          <User className="w-4 h-4 text-primary-600" />
+        </div>
         <span className="hidden md:block text-gray-700 font-medium">
           {user?.name || user?.email}
         </span>
