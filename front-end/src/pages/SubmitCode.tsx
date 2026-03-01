@@ -37,7 +37,7 @@ export default function SubmitCode() {
   const [showResults, setShowResults] = useState(false);
   const [showSessionExpiredModal, setShowSessionExpiredModal] = useState(false);
   const [rankingsRefreshKey, setRankingsRefreshKey] = useState(0);
-  const handleSubmitRef = useRef<() => void>(() => {});
+  const handleSubmitRef = useRef<() => void>(() => { });
   // Prevents the save effect from writing DEFAULT_CODE to localStorage before
   // the exercises effect has had a chance to set the correct initial code
   // (which may be a function signature template, not the Hello World fallback).
@@ -249,7 +249,7 @@ export default function SubmitCode() {
             <div className={`flex gap-6 transition-all duration-500 ${showResults ? 'flex-col lg:flex-row' : 'flex-row justify-center'
               }`}>
               {/* Code Editor */}
-              <div className={`bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden transition-all duration-500 ${showResults ? 'w-full lg:w-1/2' : 'w-full max-w-5xl'
+              <div className={`bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden transition-all duration-500 flex flex-col ${showResults ? 'w-full lg:w-1/2' : 'w-full max-w-5xl'
                 }`}>
 
                 {/* Editor Header */}
@@ -299,42 +299,44 @@ export default function SubmitCode() {
                 </div>
 
                 {/* Monaco Code Editor */}
-                <div className="relative" style={{ height: '480px' }}>
-                  <Editor
-                    height="100%"
-                    defaultLanguage="c"
-                    theme="vs-dark"
-                    value={formData.code}
-                    onChange={(value: string | undefined) => handleInputChange('code', value ?? '')}
-                    onMount={handleEditorMount}
-                    loading={
-                      <div className="flex items-center justify-center h-full bg-gray-900">
-                        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                      </div>
-                    }
-                    options={{
-                      fontSize: 14,
-                      fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace",
-                      fontLigatures: true,
-                      minimap: { enabled: false },
-                      scrollBeyondLastLine: false,
-                      wordWrap: 'on',
-                      tabSize: 4,
-                      insertSpaces: true,
-                      autoIndent: 'full',
-                      formatOnPaste: true,
-                      formatOnType: true,
-                      bracketPairColorization: { enabled: false },
-                      guides: { bracketPairs: false },
-                      suggestOnTriggerCharacters: true,
-                      quickSuggestions: { other: true, comments: false, strings: false },
-                      padding: { top: 16, bottom: 16 },
-                      renderLineHighlight: 'all',
-                      smoothScrolling: true,
-                      cursorBlinking: 'smooth',
-                      cursorSmoothCaretAnimation: 'on',
-                    }}
-                  />
+                <div className="relative flex-1" style={{ minHeight: '480px' }}>
+                  <div className="absolute inset-0">
+                    <Editor
+                      height="100%"
+                      defaultLanguage="c"
+                      theme="vs-dark"
+                      value={formData.code}
+                      onChange={(value: string | undefined) => handleInputChange('code', value ?? '')}
+                      onMount={handleEditorMount}
+                      loading={
+                        <div className="flex items-center justify-center h-full bg-gray-900">
+                          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                        </div>
+                      }
+                      options={{
+                        fontSize: 14,
+                        fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace",
+                        fontLigatures: true,
+                        minimap: { enabled: false },
+                        scrollBeyondLastLine: false,
+                        wordWrap: 'on',
+                        tabSize: 4,
+                        insertSpaces: true,
+                        autoIndent: 'full',
+                        formatOnPaste: true,
+                        formatOnType: true,
+                        bracketPairColorization: { enabled: false },
+                        guides: { bracketPairs: false },
+                        suggestOnTriggerCharacters: true,
+                        quickSuggestions: { other: true, comments: false, strings: false },
+                        padding: { top: 16, bottom: 16 },
+                        renderLineHighlight: 'all',
+                        smoothScrolling: true,
+                        cursorBlinking: 'smooth',
+                        cursorSmoothCaretAnimation: 'on',
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
 
