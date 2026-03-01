@@ -35,6 +35,17 @@ const adminEndpoints = {
   userDetails: (id: string) => `/admin/users/${id}/details`,
   guide: (n?: number) => (n !== undefined ? `/admin/guides/${n}` : '/admin/guides'),
   exercise: (g: number, e?: number) => (e !== undefined ? `/admin/guides/${g}/exercises/${e}` : `/admin/guides/${g}/exercises`),
+  metrics: {
+    progress: '/admin/metrics/progress',
+    resolutionTime: '/admin/metrics/resolution-time',
+    attempts: '/admin/metrics/attempts',
+    activeStudents: '/admin/metrics/active-students',
+    errorRate: '/admin/metrics/error-rate',
+    atRisk: '/admin/metrics/at-risk',
+    progressDistribution: '/admin/metrics/progress-distribution',
+    weeklyActivity: '/admin/metrics/weekly-activity',
+    completionMatrix: '/admin/metrics/completion-matrix',
+  },
 };
 
 export const API_ENDPOINTS = {

@@ -202,3 +202,64 @@ export interface UserDetailData {
   lastSubmissionAt: string | null;
   guides: UserDetailGuide[];
 }
+
+// ── Metrics Types ─────────────────────────────────────────────────────────────
+
+export interface StudentProgressMetric {
+  userId: string;
+  firstName: string;
+  lastName: string;
+  totalExercises: number;
+  solved: number;
+  /** 0–100 */
+  progress: number;
+}
+
+export interface AvgResolutionTimeMetric {
+  avgMinutes: number | null;
+}
+
+export interface ExerciseAttemptsMetric {
+  guideNumber: number;
+  exerciseNumber: number;
+  avgAttempts: number;
+}
+
+export interface ActiveStudentsMetric {
+  count: number;
+}
+
+export interface ExerciseErrorRateMetric {
+  guideNumber: number;
+  exerciseNumber: number;
+  /** 0–1 */
+  errorRate: number;
+  totalAttempts: number;
+}
+
+export interface StudentAtRiskMetric {
+  userId: string;
+  firstName: string;
+  lastName: string;
+  lastSubmissionAt: string | null;
+}
+
+export interface ProgressDistributionMetric {
+  bucket: string;
+  count: number;
+}
+
+export interface WeeklyActivityMetric {
+  week: string;
+  count: number;
+}
+
+export interface ExerciseCompletionMatrixMetric {
+  guideNumber: number;
+  exerciseNumber: number;
+  /** 0–1 fraction of enabled students who solved */
+  completionRate: number;
+  /** 0–1 fraction of enabled students who attempted */
+  attemptedRate: number;
+  totalStudents: number;
+}

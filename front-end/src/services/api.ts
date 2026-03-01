@@ -1,8 +1,8 @@
 import axios, { AxiosInstance } from 'axios';
 import { API_CONFIG, API_ENDPOINTS } from '@/config/api';
 import { cacheService } from './cacheService';
-import { CACHE_KEYS } from '@/config/cache';
-import type { ApiResponse, User, UserProfile, Submission, SubmissionResponse, SubmissionForm, GuideWithExercises, UserStatus, CSVUploadResult, AdminGuide, ExerciseRankingsData, AdminUser, UserDetailData, PaginatedAdminUsersResponse } from '@/types';
+import { CACHE_KEYS, CACHE_CONFIG } from '@/config/cache';
+import type { ApiResponse, User, UserProfile, Submission, SubmissionResponse, SubmissionForm, GuideWithExercises, UserStatus, CSVUploadResult, AdminGuide, ExerciseRankingsData, AdminUser, UserDetailData, PaginatedAdminUsersResponse, StudentProgressMetric, AvgResolutionTimeMetric, ExerciseAttemptsMetric, ActiveStudentsMetric, ExerciseErrorRateMetric, StudentAtRiskMetric, ProgressDistributionMetric, WeeklyActivityMetric, ExerciseCompletionMatrixMetric } from '@/types';
 
 const AUTH_TOKEN_KEY = 'auth_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
@@ -241,6 +241,83 @@ class ApiService {
   async deleteExercise(g: number, e: number): Promise<ApiResponse> {
     const response = await this.api.delete(API_ENDPOINTS.admin.exercise(g, e));
     return response.data;
+  }
+
+  // ── Metrics endpoints (5 min cache) ────────────────────────────────────────
+
+  private async getCachedMetric<T>(cacheKey: string, url: string): Promise<ApiResponse<T>> {
+    const cached = cacheService.get<T>(cacheKey);
+    if (cached !== null) {
+      return { success: true, data: cached };
+    }
+    const response = await this.api.get<ApiResponse<T>>(url);
+    if (response.data.success && response.data.data !== undefined) {
+      cacheService.set(cacheKey, response.data.data, CACHE_CONFIG.metrics);
+    }
+    return response.data;
+  }
+
+  async getMetricsProgress(): Promise<ApiResponse<StudentProgressMetric[]>> {
+    return this.getCachedMetric<StudentProgressMetric[]>(
+      CACHE_KEYS.metricsProgress,
+      API_ENDPOINTS.admin.metrics.progress,
+    );
+  }
+
+  async getMetricsResolutionTime(): Promise<ApiResponse<AvgResolutionTimeMetric>> {
+    return this.getCachedMetric<AvgResolutionTimeMetric>(
+      CACHE_KEYS.metricsResolutionTime,
+      API_ENDPOINTS.admin.metrics.resolutionTime,
+    );
+  }
+
+  async getMetricsAttempts(): Promise<ApiResponse<ExerciseAttemptsMetric[]>> {
+    return this.getCachedMetric<ExerciseAttemptsMetric[]>(
+      CACHE_KEYS.metricsAttempts,
+      API_ENDPOINTS.admin.metrics.attempts,
+    );
+  }
+
+  async getMetricsActiveStudents(): Promise<ApiResponse<ActiveStudentsMetric>> {
+    return this.getCachedMetric<ActiveStudentsMetric>(
+      CACHE_KEYS.metricsActiveStudents,
+      API_ENDPOINTS.admin.metrics.activeStudents,
+    );
+  }
+
+  async getMetricsErrorRate(): Promise<ApiResponse<ExerciseErrorRateMetric[]>> {
+    return this.getCachedMetric<ExerciseErrorRateMetric[]>(
+      CACHE_KEYS.metricsErrorRate,
+      API_ENDPOINTS.admin.metrics.errorRate,
+    );
+  }
+
+  async getMetricsAtRisk(): Promise<ApiResponse<StudentAtRiskMetric[]>> {
+    return this.getCachedMetric<StudentAtRiskMetric[]>(
+      CACHE_KEYS.metricsAtRisk,
+      API_ENDPOINTS.admin.metrics.atRisk,
+    );
+  }
+
+  async getMetricsProgressDistribution(): Promise<ApiResponse<ProgressDistributionMetric[]>> {
+    return this.getCachedMetric<ProgressDistributionMetric[]>(
+      CACHE_KEYS.metricsProgressDistribution,
+      API_ENDPOINTS.admin.metrics.progressDistribution,
+    );
+  }
+
+  async getMetricsWeeklyActivity(): Promise<ApiResponse<WeeklyActivityMetric[]>> {
+    return this.getCachedMetric<WeeklyActivityMetric[]>(
+      CACHE_KEYS.metricsWeeklyActivity,
+      API_ENDPOINTS.admin.metrics.weeklyActivity,
+    );
+  }
+
+  async getMetricsCompletionMatrix(): Promise<ApiResponse<ExerciseCompletionMatrixMetric[]>> {
+    return this.getCachedMetric<ExerciseCompletionMatrixMetric[]>(
+      CACHE_KEYS.metricsCompletionMatrix,
+      API_ENDPOINTS.admin.metrics.completionMatrix,
+    );
   }
 
   // Utility method to set auth tokens

@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Users, BookOpen } from 'lucide-react';
+import { Users, BookOpen, BarChart2 } from 'lucide-react';
 import { useAdmin } from '@/hooks/useAdmin';
 import GuidesTab from '@/components/admin/GuidesTab';
 import UsersTab from '@/components/admin/UsersTab';
+import ActivityTab from '@/components/admin/ActivityTab';
 
-type Tab = 'users' | 'guides';
+type Tab = 'users' | 'guides' | 'activity';
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState<Tab>('users');
@@ -26,8 +27,8 @@ export default function Admin() {
           <button
             onClick={() => setActiveTab('users')}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${activeTab === 'users'
-                ? 'bg-white border border-b-white border-gray-200 text-primary-700 -mb-px'
-                : 'text-gray-500 hover:text-gray-700'
+              ? 'bg-white border border-b-white border-gray-200 text-primary-700 -mb-px'
+              : 'text-gray-500 hover:text-gray-700'
               }`}
           >
             <Users className="w-4 h-4" />
@@ -36,18 +37,29 @@ export default function Admin() {
           <button
             onClick={() => setActiveTab('guides')}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${activeTab === 'guides'
-                ? 'bg-white border border-b-white border-gray-200 text-primary-700 -mb-px'
-                : 'text-gray-500 hover:text-gray-700'
+              ? 'bg-white border border-b-white border-gray-200 text-primary-700 -mb-px'
+              : 'text-gray-500 hover:text-gray-700'
               }`}
           >
             <BookOpen className="w-4 h-4" />
             Guías &amp; Ejercicios
+          </button>
+          <button
+            onClick={() => setActiveTab('activity')}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${activeTab === 'activity'
+              ? 'bg-white border border-b-white border-gray-200 text-primary-700 -mb-px'
+              : 'text-gray-500 hover:text-gray-700'
+              }`}
+          >
+            <BarChart2 className="w-4 h-4" />
+            Actividad
           </button>
         </div>
 
         {/* Tab content */}
         {activeTab === 'guides' && <GuidesTab />}
         {activeTab === 'users' && <UsersTab currentUserRoles={currentUserRoles} />}
+        {activeTab === 'activity' && <ActivityTab />}
       </div>
     </div>
   );
