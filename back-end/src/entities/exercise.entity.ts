@@ -16,6 +16,9 @@ export class Exercise {
   @Column({ name: 'function_signature', type: 'text', nullable: true, default: null })
   functionSignature!: string | null;
 
+  @Column({ name: 'has_test_file', type: 'boolean', default: false })
+  hasTestFile!: boolean;
+
   @ManyToOne(() => Guide, (guide) => guide.exercises, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'guide_number', referencedColumnName: 'guideNumber' })
   guide!: Guide;

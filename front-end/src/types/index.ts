@@ -172,6 +172,7 @@ export interface AdminExercise {
   exerciseNumber: number;
   enabled: boolean;
   functionSignature?: string | null;
+  hasTestFile?: boolean;
 }
 
 export interface AdminGuide {

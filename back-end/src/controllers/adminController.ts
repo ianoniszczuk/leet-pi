@@ -10,6 +10,7 @@ import { Guide } from '../entities/guide.entity.ts';
 import { Exercise } from '../entities/exercise.entity.ts';
 import { Try } from '../entities/try.view.ts';
 import { Submission } from '../entities/submission.entity.ts';
+import codeJudgeService from '../services/codeJudgeService.ts';
 
 function parsePositiveInt(value: unknown): number | null {
   const n = Number(value);
@@ -306,6 +307,7 @@ export class AdminController {
             exerciseNumber: e.exerciseNumber,
             enabled: e.enabled,
             functionSignature: e.functionSignature ?? null,
+            hasTestFile: e.hasTestFile,
           })),
       }));
 
@@ -638,10 +640,163 @@ export class AdminController {
         return;
       }
 
+      if (exercise.hasTestFile) {
+        try {
+          await codeJudgeService.deleteTestFile(parsedGuideNumber, parsedExerciseNumber);
+        } catch (judgeErr: any) {
+          console.warn(`Could not delete test file for exercise ${parsedGuideNumber}/${parsedExerciseNumber} from code judge:`, judgeErr.message);
+        }
+      }
+
       await exerciseRepository.remove(exercise);
       res.status(200).json(formatSuccessResponse(null, 'Exercise deleted successfully'));
     } catch (error) {
       console.error('Error deleting exercise:', error);
+      res.status(500).json(formatErrorResponse('Internal server error', 500));
+    }
+  }
+
+  /**
+   * Sube el archivo de test harness (.c) al juez para un ejercicio
+   */
+  async uploadTestFile(req: Request, res: Response): Promise<void> {
+    const { guideNumber, exerciseNumber } = req.params;
+
+    const parsedGuideNumber = parsePositiveInt(guideNumber);
+    const parsedExerciseNumber = parsePositiveInt(exerciseNumber);
+    if (parsedGuideNumber === null) { rejectBadGuideNumber(res); return; }
+    if (parsedExerciseNumber === null) { rejectBadExerciseNumber(res); return; }
+
+    try {
+      const exerciseRepository = AppDataSource.getRepository(Exercise);
+      const exercise = await exerciseRepository.findOne({
+        where: { guideNumber: parsedGuideNumber, exerciseNumber: parsedExerciseNumber },
+      });
+
+      if (!exercise) {
+        res.status(404).json(formatErrorResponse('Exercise not found', 404));
+        return;
+      }
+
+      const file = (req as any).file as Express.Multer.File | undefined;
+      if (!file) {
+        res.status(400).json(formatErrorResponse('No file uploaded', 400));
+        return;
+      }
+
+      if (!file.originalname?.toLowerCase().endsWith('.c')) {
+        res.status(400).json(formatErrorResponse('Only .c files are allowed', 400));
+        return;
+      }
+
+      try {
+        await codeJudgeService.uploadTestFile(parsedGuideNumber, parsedExerciseNumber, file.buffer, file.originalname);
+      } catch (judgeErr: any) {
+        res.status(502).json(formatErrorResponse(`Could not upload test file to code judge: ${judgeErr.message}`, 502));
+        return;
+      }
+
+      exercise.hasTestFile = true;
+      const savedExercise = await exerciseRepository.save(exercise);
+
+      res.status(200).json(formatSuccessResponse({
+        guideNumber: savedExercise.guideNumber,
+        exerciseNumber: savedExercise.exerciseNumber,
+        enabled: savedExercise.enabled,
+        functionSignature: savedExercise.functionSignature ?? null,
+        hasTestFile: savedExercise.hasTestFile,
+      }, 'Test file uploaded successfully'));
+    } catch (error) {
+      console.error('Error uploading test file:', error);
+      res.status(500).json(formatErrorResponse('Internal server error', 500));
+    }
+  }
+
+  /**
+   * Elimina el archivo de test harness del juez para un ejercicio
+   */
+  async deleteTestFile(req: Request, res: Response): Promise<void> {
+    const { guideNumber, exerciseNumber } = req.params;
+
+    const parsedGuideNumber = parsePositiveInt(guideNumber);
+    const parsedExerciseNumber = parsePositiveInt(exerciseNumber);
+    if (parsedGuideNumber === null) { rejectBadGuideNumber(res); return; }
+    if (parsedExerciseNumber === null) { rejectBadExerciseNumber(res); return; }
+
+    try {
+      const exerciseRepository = AppDataSource.getRepository(Exercise);
+      const exercise = await exerciseRepository.findOne({
+        where: { guideNumber: parsedGuideNumber, exerciseNumber: parsedExerciseNumber },
+      });
+
+      if (!exercise) {
+        res.status(404).json(formatErrorResponse('Exercise not found', 404));
+        return;
+      }
+
+      try {
+        await codeJudgeService.deleteTestFile(parsedGuideNumber, parsedExerciseNumber);
+      } catch (judgeErr: any) {
+        res.status(502).json(formatErrorResponse(`Could not delete test file from code judge: ${judgeErr.message}`, 502));
+        return;
+      }
+
+      exercise.hasTestFile = false;
+      const savedExercise = await exerciseRepository.save(exercise);
+
+      res.status(200).json(formatSuccessResponse({
+        guideNumber: savedExercise.guideNumber,
+        exerciseNumber: savedExercise.exerciseNumber,
+        enabled: savedExercise.enabled,
+        functionSignature: savedExercise.functionSignature ?? null,
+        hasTestFile: savedExercise.hasTestFile,
+      }, 'Test file deleted successfully'));
+    } catch (error) {
+      console.error('Error deleting test file:', error);
+      res.status(500).json(formatErrorResponse('Internal server error', 500));
+    }
+  }
+
+  /**
+   * Descarga el archivo de test harness del juez para un ejercicio
+   */
+  async downloadTestFile(req: Request, res: Response): Promise<void> {
+    const { guideNumber, exerciseNumber } = req.params;
+
+    const parsedGuideNumber = parsePositiveInt(guideNumber);
+    const parsedExerciseNumber = parsePositiveInt(exerciseNumber);
+    if (parsedGuideNumber === null) { rejectBadGuideNumber(res); return; }
+    if (parsedExerciseNumber === null) { rejectBadExerciseNumber(res); return; }
+
+    try {
+      const exerciseRepository = AppDataSource.getRepository(Exercise);
+      const exercise = await exerciseRepository.findOne({
+        where: { guideNumber: parsedGuideNumber, exerciseNumber: parsedExerciseNumber },
+      });
+
+      if (!exercise) {
+        res.status(404).json(formatErrorResponse('Exercise not found', 404));
+        return;
+      }
+
+      if (!exercise.hasTestFile) {
+        res.status(404).json(formatErrorResponse('No hay archivo de test para este ejercicio', 404));
+        return;
+      }
+
+      let fileBuffer: Buffer;
+      try {
+        fileBuffer = await codeJudgeService.downloadTestFile(parsedGuideNumber, parsedExerciseNumber);
+      } catch (judgeErr: any) {
+        res.status(502).json(formatErrorResponse(`Could not download test file from code judge: ${judgeErr.message}`, 502));
+        return;
+      }
+
+      res.setHeader('Content-Type', 'text/plain');
+      res.setHeader('Content-Disposition', `attachment; filename="exercise-${parsedExerciseNumber}.c"`);
+      res.status(200).send(fileBuffer);
+    } catch (error) {
+      console.error('Error downloading test file:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));
     }
   }

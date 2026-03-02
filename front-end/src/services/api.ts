@@ -243,6 +243,34 @@ class ApiService {
     return response.data;
   }
 
+  async uploadExerciseTestFile(g: number, e: number, file: File): Promise<ApiResponse> {
+    const formData = new FormData();
+    formData.append('testFile', file);
+    const response = await this.api.post(API_ENDPOINTS.admin.exerciseTestFile(g, e), formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  }
+
+  async deleteExerciseTestFile(g: number, e: number): Promise<ApiResponse> {
+    const response = await this.api.delete(API_ENDPOINTS.admin.exerciseTestFile(g, e));
+    return response.data;
+  }
+
+  async downloadExerciseTestFile(g: number, e: number): Promise<void> {
+    const response = await this.api.get(API_ENDPOINTS.admin.exerciseTestFile(g, e), {
+      responseType: 'blob',
+    });
+    const url = URL.createObjectURL(response.data as Blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `exercise-${e}.c`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   // ── Metrics endpoints (5 min cache) ────────────────────────────────────────
 
   private async getCachedMetric<T>(cacheKey: string, url: string): Promise<ApiResponse<T>> {

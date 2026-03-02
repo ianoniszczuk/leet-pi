@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
-  ChevronDown, ChevronRight, Plus, Pencil, Trash2, Loader2, AlertCircle,
+  ChevronDown, ChevronRight, Plus, Pencil, Trash2, Loader2, AlertCircle, Upload, Download, FileX,
 } from 'lucide-react';
 import { apiService } from '@/services/api';
 import { cacheService } from '@/services/cacheService';
@@ -124,9 +124,85 @@ function GuideModal({ initial, onSave, onCancel, loading }: GuideModalProps) {
   );
 }
 
+// ─── TestFileInput ─────────────────────────────────────────────────────────────
+
+interface TestFileInputProps {
+  hasTestFile: boolean;
+  onUpload: (file: File) => void;
+  onDelete: () => void;
+  onDownload: () => void;
+  loading: boolean;
+}
+
+function TestFileInput({ hasTestFile, onUpload, onDelete, onDownload, loading }: TestFileInputProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.c')) {
+      setFileError('Solo se permiten archivos .c');
+      e.target.value = '';
+      return;
+    }
+    setFileError(null);
+    onUpload(file);
+    e.target.value = '';
+  };
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">Archivo de test (.c)</label>
+      <div className="flex items-center gap-2 flex-wrap">
+        {hasTestFile ? (
+          <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+            Archivo cargado
+          </span>
+        ) : (
+          <span className="text-xs text-gray-400">Sin archivo</span>
+        )}
+        <button
+          type="button"
+          disabled={loading}
+          onClick={() => inputRef.current?.click()}
+          className="flex items-center gap-1 text-xs px-2 py-1 border border-gray-300 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors">
+          <Upload className="w-3 h-3" />
+          {hasTestFile ? 'Reemplazar' : 'Subir archivo'}
+        </button>
+        {hasTestFile && (
+          <>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={onDownload}
+              className="flex items-center gap-1 text-xs px-2 py-1 border border-gray-300 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors">
+              <Download className="w-3 h-3" />
+              Descargar
+            </button>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={onDelete}
+              className="flex items-center gap-1 text-xs px-2 py-1 border border-red-200 rounded-lg hover:bg-red-50 text-red-500 transition-colors">
+              <FileX className="w-3 h-3" />
+              Eliminar
+            </button>
+          </>
+        )}
+        <input ref={inputRef} type="file" accept=".c" className="hidden" onChange={handleFileChange} />
+      </div>
+      {fileError && <p className="text-xs text-red-500 mt-1">{fileError}</p>}
+    </div>
+  );
+}
+
+// ─── Modals ───────────────────────────────────────────────────────────────────
+
 interface ExerciseModalProps {
   guideNumber: number;
-  onSave: (data: { exerciseNumber: number; enabled: boolean; functionSignature?: string | null }) => Promise<void>;
+  onSave: (data: { exerciseNumber: number; enabled: boolean; functionSignature?: string | null }, testFile: File | null) => Promise<void>;
   onCancel: () => void;
   loading: boolean;
 }
@@ -134,6 +210,7 @@ interface ExerciseModalProps {
 function ExerciseModal({ guideNumber, onSave, onCancel, loading }: ExerciseModalProps) {
   const [exerciseNumber, setExerciseNumber] = useState('');
   const [functionSignature, setFunctionSignature] = useState('');
+  const [pendingTestFile, setPendingTestFile] = useState<File | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -141,7 +218,7 @@ function ExerciseModal({ guideNumber, onSave, onCancel, loading }: ExerciseModal
       exerciseNumber: Number(exerciseNumber),
       enabled: false,
       functionSignature: functionSignature.trim() || null,
-    });
+    }, pendingTestFile);
   };
 
   return (
@@ -165,6 +242,20 @@ function ExerciseModal({ guideNumber, onSave, onCancel, loading }: ExerciseModal
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
             <p className="text-xs text-gray-400 mt-1">Se mostrará como plantilla inicial en el editor para los alumnos.</p>
           </div>
+          <TestFileInput
+            hasTestFile={false}
+            onUpload={f => setPendingTestFile(f)}
+            onDelete={() => {}}
+            onDownload={() => {}}
+            loading={loading}
+          />
+          {pendingTestFile && (
+            <p className="text-xs text-green-600 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+              Archivo seleccionado: {pendingTestFile.name}
+              <button type="button" onClick={() => setPendingTestFile(null)} className="ml-1 text-gray-400 hover:text-red-500">✕</button>
+            </p>
+          )}
           <ModalFooter onCancel={onCancel} loading={loading} confirmLabel="Crear" />
         </form>
       </div>
@@ -174,17 +265,22 @@ function ExerciseModal({ guideNumber, onSave, onCancel, loading }: ExerciseModal
 
 interface EditExerciseModalProps {
   exercise: AdminExercise;
-  onSave: (data: { functionSignature: string | null }) => Promise<void>;
+  onSave: (data: { functionSignature: string | null }, pendingTestFile: File | null, pendingDelete: boolean) => Promise<void>;
+  onDownloadTestFile: () => void;
   onCancel: () => void;
   loading: boolean;
 }
 
-function EditExerciseModal({ exercise, onSave, onCancel, loading }: EditExerciseModalProps) {
+function EditExerciseModal({ exercise, onSave, onDownloadTestFile, onCancel, loading }: EditExerciseModalProps) {
   const [functionSignature, setFunctionSignature] = useState(exercise.functionSignature ?? '');
+  const [pendingTestFile, setPendingTestFile] = useState<File | null>(null);
+  const [pendingDelete, setPendingDelete] = useState(false);
+
+  const effectiveHasTestFile = pendingDelete ? false : (pendingTestFile !== null || (exercise.hasTestFile ?? false));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({ functionSignature: functionSignature.trim() || null });
+    onSave({ functionSignature: functionSignature.trim() || null }, pendingTestFile, pendingDelete);
   };
 
   return (
@@ -204,6 +300,22 @@ function EditExerciseModal({ exercise, onSave, onCancel, loading }: EditExercise
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
             <p className="text-xs text-gray-400 mt-1">Se mostrará como plantilla inicial en el editor. Dejar vacío para usar Hello World.</p>
           </div>
+          <TestFileInput
+            hasTestFile={effectiveHasTestFile}
+            onUpload={f => { setPendingTestFile(f); setPendingDelete(false); }}
+            onDelete={() => { setPendingDelete(true); setPendingTestFile(null); }}
+            onDownload={onDownloadTestFile}
+            loading={loading}
+          />
+          {pendingTestFile && (
+            <p className="text-xs text-green-600 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+              Archivo seleccionado: {pendingTestFile.name}
+            </p>
+          )}
+          {pendingDelete && (
+            <p className="text-xs text-red-500">El archivo de test se eliminará al guardar.</p>
+          )}
           <ModalFooter onCancel={onCancel} loading={loading} confirmLabel="Guardar" />
         </form>
       </div>
@@ -242,6 +354,11 @@ function ExerciseRow({ exercise, onToggle, onDelete, onEdit }: ExerciseRowProps)
             fn
           </span>
         )}
+        {exercise.hasTestFile && (
+          <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600" title="Tiene archivo de test">
+            test
+          </span>
+        )}
       </div>
       <div className="flex items-center gap-2">
         <button onClick={handleToggle} disabled={toggling}
@@ -272,6 +389,7 @@ interface GuideRowHandlers {
   onDeleteExercise: (g: AdminGuide, e: AdminExercise) => void;
   onEditExercise: (g: AdminGuide, e: AdminExercise) => void;
   onAddExercise: (g: AdminGuide) => void;
+  onDownloadTestFile: (g: AdminGuide, e: AdminExercise) => void;
 }
 
 interface GuideRowProps {
@@ -414,20 +532,58 @@ export default function GuidesTab() {
   const handleToggleGuide = (guide: AdminGuide) =>
     withAction(() => apiService.updateGuide(guide.guideNumber, { enabled: !guide.enabled }));
 
-  const handleSaveExercise = async (data: { exerciseNumber: number; enabled: boolean; functionSignature?: string | null }) => {
+  const handleSaveExercise = async (data: { exerciseNumber: number; enabled: boolean; functionSignature?: string | null }, testFile: File | null) => {
     if (modal?.type !== 'newExercise') return;
-    await withAction(() => apiService.createExercise(modal.guide.guideNumber, data));
+    const guideNumber = modal.guide.guideNumber;
+    setActionLoading(true);
+    try {
+      const res = await apiService.createExercise(guideNumber, data);
+      if (testFile && res.success) {
+        try {
+          await apiService.uploadExerciseTestFile(guideNumber, data.exerciseNumber, testFile);
+        } catch (uploadErr: any) {
+          setError(`Ejercicio creado, pero no se pudo subir el archivo de test: ${uploadErr.response?.data?.error?.message || uploadErr.message}`);
+        }
+      }
+      await loadGuides(true);
+      cacheService.invalidate(CACHE_KEYS.availableExercises);
+    } catch (err: any) {
+      setError(err.response?.data?.error?.message || 'Error al crear el ejercicio');
+    } finally {
+      setActionLoading(false);
+    }
     setModal(null);
   };
 
-  const handleEditExerciseSave = async (data: { functionSignature: string | null }) => {
+  const handleEditExerciseSave = async (data: { functionSignature: string | null }, pendingTestFile: File | null, pendingDelete: boolean) => {
     if (modal?.type !== 'editExercise') return;
-    await withAction(() => apiService.updateExercise(modal.guide.guideNumber, modal.exercise.exerciseNumber, data));
+    const { guideNumber, exerciseNumber } = modal.exercise;
+    setActionLoading(true);
+    try {
+      await apiService.updateExercise(guideNumber, exerciseNumber, data);
+      if (pendingDelete) {
+        await apiService.deleteExerciseTestFile(guideNumber, exerciseNumber);
+      } else if (pendingTestFile) {
+        await apiService.uploadExerciseTestFile(guideNumber, exerciseNumber, pendingTestFile);
+      }
+      await loadGuides(true);
+      cacheService.invalidate(CACHE_KEYS.availableExercises);
+    } catch (err: any) {
+      setError(err.response?.data?.error?.message || 'Error al guardar el ejercicio');
+    } finally {
+      setActionLoading(false);
+    }
     setModal(null);
   };
 
   const handleToggleExercise = (guide: AdminGuide, exercise: AdminExercise) =>
     withAction(() => apiService.updateExercise(guide.guideNumber, exercise.exerciseNumber, { enabled: !exercise.enabled }));
+
+  const handleDownloadTestFile = (guide: AdminGuide, exercise: AdminExercise) => {
+    apiService.downloadExerciseTestFile(guide.guideNumber, exercise.exerciseNumber).catch((err: any) => {
+      setError(err.response?.data?.error?.message || 'Error al descargar el archivo de test');
+    });
+  };
 
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
@@ -453,6 +609,7 @@ export default function GuidesTab() {
     onDeleteExercise: (g, e) => setDeleteTarget({ type: 'exercise', guide: g, exercise: e }),
     onEditExercise: (g, e) => setModal({ type: 'editExercise', guide: g, exercise: e }),
     onAddExercise: g => setModal({ type: 'newExercise', guide: g }),
+    onDownloadTestFile: handleDownloadTestFile,
   };
 
   return (
@@ -502,7 +659,13 @@ export default function GuidesTab() {
         <ExerciseModal guideNumber={modal.guide.guideNumber} onSave={handleSaveExercise} onCancel={() => setModal(null)} loading={actionLoading} />
       )}
       {modal?.type === 'editExercise' && (
-        <EditExerciseModal exercise={modal.exercise} onSave={handleEditExerciseSave} onCancel={() => setModal(null)} loading={actionLoading} />
+        <EditExerciseModal
+          exercise={modal.exercise}
+          onSave={handleEditExerciseSave}
+          onDownloadTestFile={() => handleDownloadTestFile(modal.guide, modal.exercise)}
+          onCancel={() => setModal(null)}
+          loading={actionLoading}
+        />
       )}
       {deleteTarget && (
         <ConfirmDeleteModal message={deleteMessage} onConfirm={handleConfirmDelete} onCancel={() => setDeleteTarget(null)} loading={actionLoading} />

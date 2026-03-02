@@ -35,6 +35,7 @@ const adminEndpoints = {
   userDetails: (id: string) => `/admin/users/${id}/details`,
   guide: (n?: number) => (n !== undefined ? `/admin/guides/${n}` : '/admin/guides'),
   exercise: (g: number, e?: number) => (e !== undefined ? `/admin/guides/${g}/exercises/${e}` : `/admin/guides/${g}/exercises`),
+  exerciseTestFile: (g: number, e: number) => `/admin/guides/${g}/exercises/${e}/test-file`,
   metrics: {
     progress: '/admin/metrics/progress',
     resolutionTime: '/admin/metrics/resolution-time',

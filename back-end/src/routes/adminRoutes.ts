@@ -22,6 +22,18 @@ const upload = multer({
   },
 });
 
+const uploadC = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 1 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.originalname?.toLowerCase().endsWith('.c')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only .c files are allowed'));
+    }
+  },
+});
+
 const ac = adminController;
 
 // User routes
@@ -40,6 +52,9 @@ router.delete('/guides/:guideNumber', requireAdmin, ac.deleteGuide.bind(ac));
 router.post('/guides/:guideNumber/exercises', requireAdmin, ac.createExercise.bind(ac));
 router.patch('/guides/:guideNumber/exercises/:exerciseNumber', requireAdmin, ac.updateExercise.bind(ac));
 router.delete('/guides/:guideNumber/exercises/:exerciseNumber', requireAdmin, ac.deleteExercise.bind(ac));
+router.post('/guides/:guideNumber/exercises/:exerciseNumber/test-file', requireAdmin, uploadC.single('testFile'), ac.uploadTestFile.bind(ac));
+router.delete('/guides/:guideNumber/exercises/:exerciseNumber/test-file', requireAdmin, ac.deleteTestFile.bind(ac));
+router.get('/guides/:guideNumber/exercises/:exerciseNumber/test-file', requireAdmin, ac.downloadTestFile.bind(ac));
 
 // Metrics routes
 const mc = metricsController;

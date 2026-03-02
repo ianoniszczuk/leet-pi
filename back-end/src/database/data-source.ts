@@ -8,6 +8,7 @@ import { ChangeEnabledDefaultToFalse1762464439246 } from '../migrations/17624644
 import { MakeSubNullable1762464552974 } from '../migrations/1762464552974-make-sub-nullable.ts';
 import { DeadlineNullable1740441600000 } from '../migrations/1740441600000-deadline-nullable.ts';
 import { AddFunctionSignatureToExercise1772245234876 } from '../migrations/1772245234876-add-function-signature-to-exercise.ts';
+import { AddHasTestFileToExercise1772245234877 } from '../migrations/1772245234877-add-has-test-file-to-exercise.ts';
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ const dataSourceOptions: DataSourceOptions = {
     MakeSubNullable1762464552974,
     DeadlineNullable1740441600000,
     AddFunctionSignatureToExercise1772245234876,
+    AddHasTestFileToExercise1772245234877,
   ],
 }
 

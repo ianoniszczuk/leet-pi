@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from router import execute
+from router import execute, tests
 
 CORS_ORIGINS = ["*"]
 CORS_METHODS = ["*"]
@@ -16,6 +16,7 @@ app.add_middleware(
 )
 
 app.include_router(execute.router)
+app.include_router(tests.router)
 
 @app.get("/")
 def read_root():

@@ -102,7 +102,7 @@ def _compile_code(source_file: str, exe_file: str, test_file: str) -> Compilatio
     """Compile user code linked with the exercise test harness"""
     compile_command = [
         'gcc',
-        '-std=c99',
+        '-std=c23',
         '-Wall',
         '-Wextra',
         source_file,
