@@ -13,8 +13,8 @@
     "migrations:generate": "cross-env TS_NODE_PROJECT=tsconfig.migrations.json typeorm-ts-node-esm migration:generate -d src/database/data-source.ts",
     "migrations:run": "cross-env TS_NODE_PROJECT=tsconfig.migrations.json typeorm-ts-node-esm migration:run -d src/database/data-source.ts",
     "migrations:revert": "cross-env TS_NODE_PROJECT=tsconfig.migrations.json typeorm-ts-node-esm migration:revert -d src/database/data-source.ts",
-    "make-admin": "tsx scripts/make-user-admin.ts",
-    "seed-admins": "tsx scripts/seed-admins.ts"
+    "make-superadmin": "tsx scripts/make-user-superadmin.ts",
+    "seed-superadmins": "tsx scripts/seed-superadmins.ts"
   },
   "keywords": [
     "programming",
