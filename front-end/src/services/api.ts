@@ -99,7 +99,7 @@ class ApiService {
     return response.data;
   }
 
-  async updateProfile(data: { firstName: string; lastName: string }): Promise<ApiResponse<UserProfile>> {
+  async updateProfile(data: { fullName: string }): Promise<ApiResponse<UserProfile>> {
     const response = await this.api.patch(API_ENDPOINTS.users.updateMe, data);
     return response.data;
   }

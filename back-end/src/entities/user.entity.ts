@@ -13,11 +13,8 @@ export class User {
   @Column({ name: 'email', type: 'varchar', length: 50, unique: true, nullable: false })
   email!: string;
 
-  @Column({ name: 'first_name', type: 'varchar', length: 100, nullable: false })
-  firstName!: string;
-
-  @Column({ name: 'last_name', type: 'varchar', length: 100, nullable: false })
-  lastName!: string;
+  @Column({ name: 'full_name', type: 'varchar', length: 200, nullable: true })
+  fullName!: string | null;
 
   @Column({ name: 'enabled', type: 'boolean', default: false })
   enabled!: boolean;

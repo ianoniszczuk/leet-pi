@@ -36,7 +36,7 @@ export function AtRiskTable({ data, id }: AtRiskTableProps) {
                                 <tr key={s.userId} className="hover:bg-[#fff8c5] transition-colors">
                                     <td className="py-1.5 flex items-center gap-1.5 text-[#24292f] font-mono">
                                         <AlertTriangle className="w-3 h-3 text-[#bf8700] flex-shrink-0" strokeWidth={1.5} />
-                                        {s.lastName}, {s.firstName}
+                                        {s.fullName ?? '—'}
                                     </td>
                                     <td className="py-1.5 text-right text-[#6e7781] font-mono">
                                         {fmtDate(s.lastSubmissionAt)}

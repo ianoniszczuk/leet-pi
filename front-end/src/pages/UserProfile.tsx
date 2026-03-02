@@ -119,7 +119,7 @@ export default function UserProfile() {
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
                     <h2 className="text-xl font-semibold text-gray-900">
-                      {userProfile?.firstName} {userProfile?.lastName}
+                      {userProfile?.fullName}
                     </h2>
                     <button
                       onClick={() => setIsEditModalOpen(true)}
@@ -309,8 +309,7 @@ export default function UserProfile() {
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         onSaved={refetchProfile}
-        currentFirstName={userProfile?.firstName ?? ''}
-        currentLastName={userProfile?.lastName ?? ''}
+        currentFullName={userProfile?.fullName ?? ''}
       />
     </ProtectedRoute>
   );

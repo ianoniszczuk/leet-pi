@@ -18,8 +18,7 @@ export const METRICS_CONSTANTS = {
 
 export interface StudentProgressMetric {
     userId: string;
-    firstName: string;
-    lastName: string;
+    fullName: string | null;
     /** Total enabled exercises available */
     totalExercises: number;
     /** Exercises solved by this student */
@@ -54,8 +53,7 @@ export interface ExerciseErrorRateMetric {
 
 export interface StudentAtRiskMetric {
     userId: string;
-    firstName: string;
-    lastName: string;
+    fullName: string | null;
     lastSubmissionAt: string | null;
 }
 
@@ -90,12 +88,11 @@ export class MetricsService {
      */
     async getProgressByStudent(): Promise<StudentProgressMetric[]> {
         const rows = await AppDataSource.query<
-            { user_id: string; first_name: string; last_name: string; solved: string; total_exercises: string }[]
+            { user_id: string; full_name: string | null; solved: string; total_exercises: string }[]
         >(`
       SELECT
         u.id            AS user_id,
-        u.first_name,
-        u.last_name,
+        u.full_name,
         COUNT(DISTINCT CASE WHEN t.success THEN t.guide_number || '-' || t.exercise_number END) AS solved,
         (SELECT COUNT(*) FROM exercises e2 WHERE e2.enabled = true)                             AS total_exercises
       FROM users u
@@ -104,8 +101,8 @@ export class MetricsService {
         AND NOT EXISTS (
           SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id
         )
-      GROUP BY u.id, u.first_name, u.last_name
-      ORDER BY u.last_name ASC, u.first_name ASC
+      GROUP BY u.id, u.full_name
+      ORDER BY u.full_name ASC
     `);
 
         return rows.map((r) => {
@@ -113,8 +110,7 @@ export class MetricsService {
             const total = Number(r.total_exercises);
             return {
                 userId: r.user_id,
-                firstName: r.first_name,
-                lastName: r.last_name,
+                fullName: r.full_name ?? null,
                 totalExercises: total,
                 solved,
                 progress: total > 0 ? Math.round((solved / total) * 100) : 0,
@@ -232,12 +228,11 @@ export class MetricsService {
      */
     async getStudentsAtRisk(): Promise<StudentAtRiskMetric[]> {
         const rows = await AppDataSource.query<
-            { user_id: string; first_name: string; last_name: string; last_submission_at: string | null }[]
+            { user_id: string; full_name: string | null; last_submission_at: string | null }[]
         >(`
       SELECT
         u.id                    AS user_id,
-        u.first_name,
-        u.last_name,
+        u.full_name,
         MAX(s.created_at)::text AS last_submission_at
       FROM users u
       LEFT JOIN submissions s ON s.user_id = u.id
@@ -252,14 +247,13 @@ export class MetricsService {
             AND s2.success = true
             AND s2.created_at >= NOW() - INTERVAL '${METRICS_CONSTANTS.AT_RISK_DAYS} days'
         )
-      GROUP BY u.id, u.first_name, u.last_name
-      ORDER BY u.last_name ASC, u.first_name ASC
+      GROUP BY u.id, u.full_name
+      ORDER BY u.full_name ASC
     `);
 
         return rows.map((r) => ({
             userId: r.user_id,
-            firstName: r.first_name,
-            lastName: r.last_name,
+            fullName: r.full_name ?? null,
             lastSubmissionAt: r.last_submission_at ?? null,
         }));
     }

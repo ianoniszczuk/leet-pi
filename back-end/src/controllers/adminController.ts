@@ -112,8 +112,7 @@ export class AdminController {
       const result = users.map((u) => ({
         id: u.id,
         email: u.email,
-        firstName: u.firstName,
-        lastName: u.lastName,
+        fullName: u.fullName,
         enabled: u.enabled,
         roles: (u.userRoles ?? []).map((r) => r.roleId),
       }));
@@ -191,8 +190,7 @@ export class AdminController {
       res.status(200).json(formatSuccessResponse({
         id: updated!.id,
         email: updated!.email,
-        firstName: updated!.firstName,
-        lastName: updated!.lastName,
+        fullName: updated!.fullName,
         enabled: updated!.enabled,
         roles: (updated!.userRoles ?? []).map((r) => r.roleId),
       }, 'User updated successfully'));
@@ -590,8 +588,7 @@ export class AdminController {
 
       const result = {
         id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
+        fullName: user.fullName,
         email: user.email,
         lastSubmissionAt: (lastSub?.lastSubmissionAt as string | null) ?? null,
         guides: guides.map((g) => ({

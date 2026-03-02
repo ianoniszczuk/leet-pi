@@ -310,7 +310,7 @@ export default function UsersTab({ currentUserRoles }: UsersTabProps) {
                           onClick={() => setSelectedUser(u)}
                           className="text-left text-gray-600 cursor-pointer"
                         >
-                          {u.firstName} {u.lastName}
+                          {u.fullName ?? '-'}
                         </button>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{u.email}</td>

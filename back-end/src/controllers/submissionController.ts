@@ -259,8 +259,7 @@ class SubmissionController {
             GROUP BY s.user_id, fs.first_success_at
           )
           SELECT
-            u.first_name AS "firstName",
-            u.last_name  AS "lastName",
+            u.full_name AS "fullName",
             ac.attempts
           FROM attempts_count ac
           INNER JOIN users u ON ac.user_id = u.id
@@ -276,8 +275,7 @@ class SubmissionController {
         ),
         AppDataSource.query(
           `SELECT
-            u.first_name       AS "firstName",
-            u.last_name        AS "lastName",
+            u.full_name        AS "fullName",
             MIN(s.created_at)  AS "submittedAt",
             g.deadline         AS "deadline"
           FROM submissions s
@@ -292,7 +290,7 @@ class SubmissionController {
               WHERE ur.user_id = u.id
                 AND ur.role_id IN ('admin', 'superadmin')
             )
-          GROUP BY u.id, u.first_name, u.last_name, g.deadline
+          GROUP BY u.id, u.full_name, g.deadline
           ORDER BY "submittedAt" ASC
           LIMIT 5`,
           [guideNumber, exerciseNumber]
@@ -302,19 +300,19 @@ class SubmissionController {
       const deadline: Date | null = guideRows[0]?.deadline ?? null;
       const hasDeadline = deadline !== null;
 
-      const fewestAttempts = (fewestRows as { firstName: string; lastName: string; attempts: number }[]).map(
+      const fewestAttempts = (fewestRows as { fullName: string | null; attempts: number }[]).map(
         (row, i) => ({
           rank: i + 1,
-          fullName: `${row.firstName} ${row.lastName}`,
+          fullName: row.fullName ?? null,
           attempts: row.attempts,
         })
       );
 
       const earliestCompletion = hasDeadline
-        ? (earliestRows as { firstName: string; lastName: string; submittedAt: string; deadline: string }[]).map(
+        ? (earliestRows as { fullName: string | null; submittedAt: string; deadline: string }[]).map(
             (row, i) => ({
               rank: i + 1,
-              fullName: `${row.firstName} ${row.lastName}`,
+              fullName: row.fullName ?? null,
               submittedAt: row.submittedAt,
               marginMs: new Date(deadline!).getTime() - new Date(row.submittedAt).getTime(),
             })

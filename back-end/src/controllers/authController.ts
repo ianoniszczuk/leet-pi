@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { formatSuccessResponse, formatErrorResponse } from '../utils/responseFormatter.ts';
 import jwtService from '../services/jwtService.ts';
 import userService from '../services/userService.ts';
+import userDAO from '../persistence/user.dao.ts';
 import type { Auth0Payload } from '../middleware/auth.ts';
 
 export class AuthController {
@@ -35,6 +36,16 @@ export class AuthController {
       const roles = (user.userRoles ?? []).map((userRole) => userRole.roleId);
       console.log(`[AuthController] Login exitoso para ${user.email}, roles=[${roles.join(', ')}]`);
 
+      // Auto-populate fullName from Auth0 if missing (e.g. users pre-created via CSV)
+      if (!user.fullName) {
+        const name = auth0User.name ||
+          [auth0User.given_name, auth0User.family_name].filter(Boolean).join(' ').trim() || null;
+        if (name) {
+          await userDAO.update(user.id, { fullName: name });
+          user.fullName = name;
+        }
+      }
+
       const { authToken, refreshToken } = jwtService.generateTokens({
         sub: user.sub,
         email: user.email,
@@ -50,8 +61,7 @@ export class AuthController {
           user: {
             sub: user.sub,
             email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
+            fullName: user.fullName,
             enabled: user.enabled,
             roles,
           },

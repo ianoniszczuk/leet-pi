@@ -7,8 +7,7 @@ import { UserRoles } from '../entities/user-roles.entity.ts';
 
 interface AdminRow {
     email: string;
-    firstName: string;
-    lastName: string;
+    fullName: string;
 }
 
 const DEFAULT_CSV_PATH = path.resolve(
@@ -65,8 +64,7 @@ export async function seedAdmins(
         })
         .map((row) => ({
             email: row.email.trim().toLowerCase(),
-            firstName: (row.firstName ?? '').trim(),
-            lastName: (row.lastName ?? '').trim(),
+            fullName: (row.fullName ?? '').trim(),
         }));
 
     if (validRows.length === 0) {
@@ -89,16 +87,14 @@ export async function seedAdmins(
                 user = await userRepo.save(
                     userRepo.create({
                         email: row.email,
-                        firstName: row.firstName,
-                        lastName: row.lastName,
+                        fullName: row.fullName || null,
                         sub: null,
                         enabled: true,
                     }),
                 );
                 created++;
             } else if (!user.enabled) {
-                if (row.firstName && !user.firstName) user.firstName = row.firstName;
-                if (row.lastName && !user.lastName) user.lastName = row.lastName;
+                if (row.fullName && !user.fullName) user.fullName = row.fullName;
                 user.enabled = true;
                 await userRepo.save(user);
                 enabled++;

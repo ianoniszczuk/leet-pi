@@ -28,8 +28,7 @@ export class UserService {
     const userData = {
       sub: payload.sub,
       email: payload.email,
-      firstName: payload.given_name || payload.name?.split(' ')[0] || '',
-      lastName: payload.family_name || payload.name?.split(' ').slice(1).join(' ') || '',
+      fullName: payload.name || [payload.given_name, payload.family_name].filter(Boolean).join(' ').trim() || null,
       enabled: false, // Por defecto, los nuevos usuarios no están habilitados
     };
 
@@ -153,9 +152,9 @@ export class UserService {
   }
 
   /**
-   * Actualiza el firstName y lastName del usuario identificado por sub
+   * Actualiza el fullName del usuario identificado por sub
    */
-  async updateProfile(sub: string, data: { firstName: string; lastName: string }): Promise<User | null> {
+  async updateProfile(sub: string, data: { fullName: string }): Promise<User | null> {
     const user = await userDAO.findBySub(sub);
     if (!user) return null;
     return await userDAO.update(user.id, data);

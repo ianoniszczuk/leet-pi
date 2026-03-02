@@ -8,8 +8,7 @@ export class UserController {
     return {
       id: user.id,
       email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
+      fullName: user.fullName,
     };
   }
 
@@ -50,16 +49,15 @@ export class UserController {
         return;
       }
 
-      const { firstName, lastName } = req.body;
+      const { fullName } = req.body;
 
-      if (!firstName?.trim() || !lastName?.trim()) {
-        res.status(400).json(formatErrorResponse('firstName and lastName are required', 400));
+      if (!fullName?.trim()) {
+        res.status(400).json(formatErrorResponse('fullName is required', 400));
         return;
       }
 
       const updated = await userService.updateProfile(req.user.sub, {
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
+        fullName: fullName.trim(),
       });
 
       if (!updated) {

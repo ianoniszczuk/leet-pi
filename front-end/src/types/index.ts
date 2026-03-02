@@ -26,8 +26,7 @@ export interface User {
   id: string;
   sub: string;
   email: string;
-  firstName: string;
-  lastName: string;
+  fullName: string | null;
   enabled?: boolean;
   roles?: string[];
   submissions?: Submission[];
@@ -140,8 +139,7 @@ export interface AuthButtonProps {
 export interface AdminUser {
   id: string;
   email: string;
-  firstName: string;
-  lastName: string;
+  fullName: string | null;
   enabled: boolean;
   roles: string[];
 }
@@ -197,8 +195,7 @@ export interface UserDetailGuide {
 
 export interface UserDetailData {
   id: string;
-  firstName: string;
-  lastName: string;
+  fullName: string | null;
   email: string;
   lastSubmissionAt: string | null;
   guides: UserDetailGuide[];
@@ -208,8 +205,7 @@ export interface UserDetailData {
 
 export interface StudentProgressMetric {
   userId: string;
-  firstName: string;
-  lastName: string;
+  fullName: string | null;
   totalExercises: number;
   solved: number;
   /** 0–100 */
@@ -240,8 +236,7 @@ export interface ExerciseErrorRateMetric {
 
 export interface StudentAtRiskMetric {
   userId: string;
-  firstName: string;
-  lastName: string;
+  fullName: string | null;
   lastSubmissionAt: string | null;
 }
 

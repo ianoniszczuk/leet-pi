@@ -58,7 +58,7 @@ export class UserDAO {
   async findAll(): Promise<User[]> {
     return await this.repository.find({
       relations: ['submissions', 'userRoles'],
-      order: { firstName: 'ASC', lastName: 'ASC' },
+      order: { fullName: 'ASC' },
     });
   }
 
@@ -76,7 +76,7 @@ export class UserDAO {
   }> {
     const [users, total] = await this.repository.findAndCount({
       relations: ['submissions', 'userRoles'],
-      order: { firstName: 'ASC', lastName: 'ASC' },
+      order: { fullName: 'ASC' },
       skip: (page - 1) * limit,
       take: limit,
     });
@@ -151,7 +151,7 @@ export class UserDAO {
 
   /**
    * Obtiene usuarios con búsqueda y paginación combinadas
-   * @param search - Término de búsqueda (opcional) sobre firstName, lastName y email
+   * @param search - Término de búsqueda (opcional) sobre fullName y email
    * @param page - Número de página (empezando en 1)
    * @param limit - Cantidad de usuarios por página
    * @returns Promise<{ users: User[], total: number, page: number, totalPages: number }>
@@ -171,8 +171,7 @@ export class UserDAO {
     const qb = this.repository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.userRoles', 'userRoles')
-      .orderBy('user.firstName', 'ASC')
-      .addOrderBy('user.lastName', 'ASC')
+      .orderBy('user.fullName', 'ASC')
       .skip((page - 1) * limit)
       .take(limit);
 
@@ -180,7 +179,7 @@ export class UserDAO {
     const params: Record<string, unknown> = {};
 
     if (search.trim()) {
-      conditions.push('(user.firstName ILIKE :term OR user.lastName ILIKE :term OR user.email ILIKE :term)');
+      conditions.push('(user.fullName ILIKE :term OR user.email ILIKE :term)');
       params.term = `%${search.trim()}%`;
     }
 
@@ -211,7 +210,7 @@ export class UserDAO {
   }
 
   /**
-   * Busca usuarios por nombre (firstName o lastName)
+   * Busca usuarios por nombre (fullName)
    * @param searchTerm - Término de búsqueda
    * @returns Promise<User[]>
    */
@@ -219,11 +218,10 @@ export class UserDAO {
     return await this.repository
       .createQueryBuilder('user')
       .where(
-        'LOWER(user.firstName) LIKE LOWER(:searchTerm) OR LOWER(user.lastName) LIKE LOWER(:searchTerm)',
+        'LOWER(user.fullName) LIKE LOWER(:searchTerm)',
         { searchTerm: `%${searchTerm}%` }
       )
-      .orderBy('user.firstName', 'ASC')
-      .addOrderBy('user.lastName', 'ASC')
+      .orderBy('user.fullName', 'ASC')
       .getMany();
   }
 
@@ -261,7 +259,7 @@ export class UserDAO {
       .addSelect('COUNT(submission.userId)', 'submissionCount')
       .groupBy('user.id')
       .orderBy('submissionCount', 'DESC')
-      .addOrderBy('user.firstName', 'ASC')
+      .addOrderBy('user.fullName', 'ASC')
       .limit(limit)
       .getMany();
   }
@@ -298,12 +296,9 @@ export class UserDAO {
       if (!userData.sub) {
         userData.sub = null;
       }
-      // Si no se proporcionan nombres, usar valores por defecto
-      if (!userData.firstName) {
-        userData.firstName = '';
-      }
-      if (!userData.lastName) {
-        userData.lastName = '';
+      // Si no se proporciona nombre completo, dejar como null
+      if (userData.fullName === undefined) {
+        userData.fullName = null;
       }
       user = await this.create(userData);
     }

@@ -6,19 +6,16 @@ interface EditProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaved: () => void;
-  currentFirstName: string;
-  currentLastName: string;
+  currentFullName: string;
 }
 
 export default function EditProfileModal({
   isOpen,
   onClose,
   onSaved,
-  currentFirstName,
-  currentLastName,
+  currentFullName,
 }: EditProfileModalProps) {
-  const [firstName, setFirstName] = useState(currentFirstName);
-  const [lastName, setLastName] = useState(currentLastName);
+  const [fullName, setFullName] = useState(currentFullName);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isClosing, setIsClosing] = useState(false);
@@ -26,11 +23,10 @@ export default function EditProfileModal({
   // Sync form values when modal opens
   useEffect(() => {
     if (isOpen) {
-      setFirstName(currentFirstName);
-      setLastName(currentLastName);
+      setFullName(currentFullName);
       setError(null);
     }
-  }, [isOpen, currentFirstName, currentLastName]);
+  }, [isOpen, currentFullName]);
 
   const handleClose = () => {
     if (isLoading) return;
@@ -42,11 +38,10 @@ export default function EditProfileModal({
   };
 
   const handleSave = async () => {
-    const trimmedFirst = firstName.trim();
-    const trimmedLast = lastName.trim();
+    const trimmed = fullName.trim();
 
-    if (!trimmedFirst || !trimmedLast) {
-      setError('El nombre y apellido son obligatorios.');
+    if (!trimmed) {
+      setError('El nombre completo es obligatorio.');
       return;
     }
 
@@ -54,10 +49,7 @@ export default function EditProfileModal({
     setError(null);
 
     try {
-      const response = await apiService.updateProfile({
-        firstName: trimmedFirst,
-        lastName: trimmedLast,
-      });
+      const response = await apiService.updateProfile({ fullName: trimmed });
 
       if (response.success) {
         setIsLoading(false);
@@ -99,7 +91,7 @@ export default function EditProfileModal({
             </div>
             <div>
               <h3 className="text-lg font-semibold text-gray-900">Editar perfil</h3>
-              <p className="text-sm text-gray-500">Actualizá tu nombre y apellido</p>
+              <p className="text-sm text-gray-500">Actualizá tu nombre completo</p>
             </div>
           </div>
           <button
@@ -121,29 +113,15 @@ export default function EditProfileModal({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nombre
+              Nombre completo
             </label>
             <input
               type="text"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
               disabled={isLoading}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500 transition-colors"
-              placeholder="Tu nombre"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Apellido
-            </label>
-            <input
-              type="text"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              disabled={isLoading}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500 transition-colors"
-              placeholder="Tu apellido"
+              placeholder="Tu nombre completo"
             />
           </div>
         </div>

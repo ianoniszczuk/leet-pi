@@ -95,10 +95,9 @@ components:
         email:
           type: string
           format: email
-        firstName:
+        fullName:
           type: string
-        lastName:
-          type: string
+          nullable: true
         enabled:
           type: boolean
         roles:
@@ -106,7 +105,7 @@ components:
           items:
             type: string
             enum: [admin, superadmin]
-      required: [id, email, firstName, lastName, enabled, roles]
+      required: [id, email, fullName, enabled, roles]
 
     UserProfile:
       type: object
@@ -117,10 +116,9 @@ components:
         email:
           type: string
           format: email
-        firstName:
+        fullName:
           type: string
-        lastName:
-          type: string
+          nullable: true
         sub:
           type: string
           description: Auth0 subject identifier
@@ -134,10 +132,9 @@ components:
         email:
           type: string
           format: email
-        firstName:
+        fullName:
           type: string
-        lastName:
-          type: string
+          nullable: true
         submissionCount:
           type: integer
 
@@ -373,10 +370,9 @@ paths:
                                 type: string
                               email:
                                 type: string
-                              firstName:
+                              fullName:
                                 type: string
-                              lastName:
-                                type: string
+                                nullable: true
                               enabled:
                                 type: boolean
                               roles:
@@ -390,8 +386,7 @@ paths:
                   user:
                     sub: auth0|abc123
                     email: user@example.com
-                    firstName: Juan
-                    lastName: Pérez
+                    fullName: Juan Pérez
                     enabled: true
                     roles: [student]
         '401':
@@ -430,8 +425,7 @@ paths:
                 data:
                   id: 550e8400-e29b-41d4-a716-446655440000
                   email: user@example.com
-                  firstName: Juan
-                  lastName: Pérez
+                  fullName: Juan Pérez
                   sub: auth0|abc123
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -442,7 +436,7 @@ paths:
     patch:
       tags: [Users]
       summary: Actualizar nombre y apellido del usuario autenticado
-      description: Permite al usuario autenticado actualizar su firstName y lastName.
+      description: Permite al usuario autenticado actualizar su fullName.
       operationId: updateMe
       security:
         - BearerAuth: []
@@ -452,14 +446,11 @@ paths:
           application/json:
             schema:
               type: object
-              required: [firstName, lastName]
+              required: [fullName]
               properties:
-                firstName:
+                fullName:
                   type: string
-                  example: Juan
-                lastName:
-                  type: string
-                  example: Pérez
+                  example: Juan Pérez
       responses:
         '200':
           description: Perfil actualizado
@@ -478,18 +469,16 @@ paths:
                             format: uuid
                           email:
                             type: string
-                          firstName:
+                          fullName:
                             type: string
-                          lastName:
-                            type: string
+                            nullable: true
               example:
                 success: true
                 message: Profile updated successfully
                 data:
                   id: 550e8400-e29b-41d4-a716-446655440000
                   email: user@example.com
-                  firstName: Juan
-                  lastName: Pérez
+                  fullName: Juan Pérez
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -501,7 +490,7 @@ paths:
     get:
       tags: [Users]
       summary: Información básica del usuario actual
-      description: Retorna id, email, firstName y lastName del usuario autenticado.
+      description: Retorna id, email y fullName del usuario autenticado.
       operationId: getCurrentUser
       security:
         - BearerAuth: []
@@ -523,18 +512,16 @@ paths:
                             format: uuid
                           email:
                             type: string
-                          firstName:
+                          fullName:
                             type: string
-                          lastName:
-                            type: string
+                            nullable: true
               example:
                 success: true
                 message: Current user retrieved successfully
                 data:
                   id: 550e8400-e29b-41d4-a716-446655440000
                   email: user@example.com
-                  firstName: Juan
-                  lastName: Pérez
+                  fullName: Juan Pérez
         '401':
           $ref: '#/components/responses/Unauthorized'
         '500':
@@ -568,8 +555,7 @@ paths:
                 data:
                   - id: 550e8400-e29b-41d4-a716-446655440000
                     email: user@example.com
-                    firstName: Juan
-                    lastName: Pérez
+                    fullName: Juan Pérez
                     submissionCount: 5
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -965,8 +951,7 @@ paths:
                 data:
                   - id: 550e8400-e29b-41d4-a716-446655440000
                     email: user@example.com
-                    firstName: Juan
-                    lastName: Pérez
+                    fullName: Juan Pérez
                     enabled: true
                     roles: []
         '401':
@@ -1028,8 +1013,7 @@ paths:
                 data:
                   id: 550e8400-e29b-41d4-a716-446655440000
                   email: user@example.com
-                  firstName: Juan
-                  lastName: Pérez
+                  fullName: Juan Pérez
                   enabled: false
                   roles: []
         '400':

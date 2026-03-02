@@ -142,7 +142,7 @@ export default function UserDetailModal({ isOpen, userId, userRoles, onClose }: 
                 <>
                   <div className="flex items-center gap-2">
                     <h3 className="text-lg font-semibold text-gray-900">
-                      {data.firstName} {data.lastName}
+                      {data.fullName ?? '-'}
                     </h3>
                     <RoleBadge roles={userRoles} />
                   </div>

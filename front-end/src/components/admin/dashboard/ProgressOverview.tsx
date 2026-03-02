@@ -112,7 +112,7 @@ export function ProgressOverview({ data, id }: ProgressOverviewProps) {
                         return (
                             <div key={s.userId} className="flex items-center gap-2">
                                 <span className="text-xs text-[#57606a] w-36 truncate font-mono">
-                                    {s.lastName}, {s.firstName}
+                                    {s.fullName ?? '—'}
                                 </span>
                                 <div className="flex-1 bg-[#f6f8fa] rounded-sm h-2 border border-[#d0d7de]">
                                     <div
