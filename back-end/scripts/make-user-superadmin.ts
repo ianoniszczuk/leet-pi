@@ -51,12 +51,12 @@ async function makeUserAdmin() {
     // Crear rol admin
     const adminRole = userRolesRepository.create({
       userId: user.id,
-      roleId: 'admin',
+      roleId: 'superadmin',
     });
 
     await userRolesRepository.save(adminRole);
 
-    console.log(`✅ Rol admin asignado exitosamente a ${email}`);
+    console.log(`✅ Rol SUPERADMIN asignado exitosamente a ${email}`);
     console.log(`\nUsuario actualizado:`);
     console.log(`  - Email: ${user.email}`);
     console.log(`  - Nombre: ${user.firstName} ${user.lastName}`);
