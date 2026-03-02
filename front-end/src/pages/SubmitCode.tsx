@@ -245,7 +245,7 @@ export default function SubmitCode() {
           </div>
 
           {/* Code Editor and Results Container */}
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-5xl mx-auto">
             <div className={`flex gap-6 transition-all duration-500 ${showResults ? 'flex-col lg:flex-row' : 'flex-row justify-center'
               }`}>
               {/* Code Editor */}
@@ -267,14 +267,15 @@ export default function SubmitCode() {
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className="text-xs text-gray-500 bg-gray-200 px-3 py-1 rounded-full">
-                      Ctrl+Enter para enviar
-                    </span>
-                    <button
-                      onClick={handleSubmit}
-                      disabled={loading || !formData.code.trim()}
-                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-400 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:transform-none"
-                    >
+                    <div className="relative group/submit flex items-center">
+                      <span className="absolute top-full mt-2 left-1/2 -translate-x-1/2 text-xs text-gray-500 bg-gray-200 px-3 py-1 rounded-full whitespace-nowrap opacity-0 group-hover/submit:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                        Ctrl+Enter
+                      </span>
+                      <button
+                        onClick={handleSubmit}
+                        disabled={loading || !formData.code.trim()}
+                        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-400 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:transform-none"
+                      >
                       {loading ? (
                         <>
                           <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -286,7 +287,8 @@ export default function SubmitCode() {
                           <span className="hidden sm:inline">Enviar</span>
                         </>
                       )}
-                    </button>
+                      </button>
+                    </div>
                     {showResults && (
                       <button
                         onClick={resetEditor}
@@ -431,7 +433,7 @@ function ResultsPanel({ result, error, loading }: { result: SubmissionResponse |
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="h-full flex flex-col">
       {/* Header */}
       <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
@@ -456,13 +458,13 @@ function ResultsPanel({ result, error, loading }: { result: SubmissionResponse |
       </div>
 
       {/* Content */}
-      <div className="p-6 space-y-6">
+      <div className="flex-1 flex flex-col gap-6 p-6">
         {/* Overall Status */}
         <div className={`p-6 rounded-xl border-2 ${result.overallStatus === 'approved'
           ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-300'
           : 'bg-gradient-to-br from-red-50 to-rose-50 border-red-300'
           }`}>
-          <div className="flex items-center gap-4 mb-3">
+          <div className="flex items-center justify-center gap-4">
             <div className={`w-12 h-12 rounded-full flex items-center justify-center ${result.overallStatus === 'approved'
               ? 'bg-green-100'
               : 'bg-red-100'
@@ -478,38 +480,31 @@ function ResultsPanel({ result, error, loading }: { result: SubmissionResponse |
                 }`}>
                 {result.overallStatus === 'approved' ? '¡Excelente! Aprobado' : 'Necesita correcciones'}
               </h4>
-              <p className={`text-sm ${result.overallStatus === 'approved' ? 'text-green-600' : 'text-red-600'
-                }`}>
-                {result.message}
-              </p>
             </div>
           </div>
         </div>
 
         {/* Score and Performance */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
           {/* Score */}
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                <span className="text-blue-600 font-bold text-lg">📊</span>
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-3 border border-blue-200 flex flex-col overflow-hidden">
+            <div className="flex flex-col items-center gap-1 mb-3">
+              <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center">
+                <span className="text-blue-600 font-bold text-xs">📊</span>
               </div>
-              <div>
-                <h4 className="font-semibold text-gray-900">Puntuación</h4>
-                <p className="text-sm text-gray-600">Resultado general</p>
-              </div>
+              <h4 className="font-semibold text-gray-900 text-base whitespace-nowrap">Puntuación</h4>
             </div>
-            <div className="text-center">
-              <span className="text-4xl font-bold text-blue-600">
+            <div className="flex-1 flex flex-col items-center justify-center text-center">
+              <span className="text-3xl font-bold text-blue-600">
                 {result.score}%
               </span>
-              <div className="w-full bg-gray-200 rounded-full h-3 mt-3">
+              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
                 <div
-                  className="bg-gradient-to-r from-blue-500 to-indigo-500 h-3 rounded-full transition-all duration-1000"
+                  className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full transition-all duration-1000"
                   style={{ width: `${result.score}%` }}
                 />
               </div>
-              <div className="flex justify-between text-sm text-gray-600 mt-2">
+              <div className="flex justify-between text-xs text-gray-600 mt-1 w-full">
                 <span>{result.passedTests} tests</span>
                 <span>{result.totalTests} total</span>
               </div>
@@ -517,104 +512,29 @@ function ResultsPanel({ result, error, loading }: { result: SubmissionResponse |
           </div>
 
           {/* Time */}
-          <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl p-6 border border-purple-200">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                <Clock className="w-5 h-5 text-purple-600" />
+          <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl p-3 border border-purple-200 flex flex-col overflow-hidden">
+            <div className="flex flex-col items-center gap-1 mb-3">
+              <div className="w-7 h-7 bg-purple-100 rounded-full flex items-center justify-center">
+                <Clock className="w-3.5 h-3.5 text-purple-600" />
               </div>
-              <div>
-                <h4 className="font-semibold text-gray-900">Tiempo</h4>
-                <p className="text-sm text-gray-600">Ejecución</p>
-              </div>
+              <h4 className="font-semibold text-gray-900 text-base whitespace-nowrap">Tiempo</h4>
             </div>
-            <div className="text-center">
-              <span className="text-2xl font-bold text-purple-600">{result.executionTime}</span>
+            <div className="flex-1 flex items-center justify-center text-center">
+              <span className="text-xl font-bold text-purple-600">{result.executionTime}</span>
             </div>
           </div>
 
           {/* Memory */}
-          <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-6 border border-orange-200">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                <HardDrive className="w-5 h-5 text-orange-600" />
+          <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-3 border border-orange-200 flex flex-col overflow-hidden">
+            <div className="flex flex-col items-center gap-1 mb-3">
+              <div className="w-7 h-7 bg-orange-100 rounded-full flex items-center justify-center">
+                <HardDrive className="w-3.5 h-3.5 text-orange-600" />
               </div>
-              <div>
-                <h4 className="font-semibold text-gray-900">Memoria</h4>
-                <p className="text-sm text-gray-600">Uso de RAM</p>
-              </div>
+              <h4 className="font-semibold text-gray-900 text-base whitespace-nowrap">Memoria</h4>
             </div>
-            <div className="text-center">
-              <span className="text-2xl font-bold text-orange-600">{result.memoryUsage}</span>
+            <div className="flex-1 flex items-center justify-center text-center">
+              <span className="text-xl font-bold text-orange-600">{result.memoryUsage}</span>
             </div>
-          </div>
-        </div>
-
-        {/* Test Results */}
-        <div>
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
-              <TestTube className="w-4 h-4 text-indigo-600" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 text-lg">Test Cases</h3>
-              <p className="text-sm text-gray-600">{result.passedTests} de {result.totalTests} tests pasaron</p>
-            </div>
-          </div>
-
-          <div className="grid gap-4">
-            {result.testResults.map((test, index) => (
-              <div
-                key={index}
-                className={`p-5 rounded-xl border-2 ${test.passed
-                  ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200'
-                  : 'bg-gradient-to-br from-red-50 to-rose-50 border-red-200'
-                  }`}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${test.passed ? 'bg-green-100' : 'bg-red-100'
-                      }`}>
-                      <span className={`text-sm font-bold ${test.passed ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                        {test.testNumber}
-                      </span>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900">Test Case {test.testNumber}</h4>
-                      <p className="text-sm text-gray-600">Verificación de entrada y salida</p>
-                    </div>
-                  </div>
-                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${test.passed
-                    ? 'bg-green-100 text-green-800 border border-green-200'
-                    : 'bg-red-100 text-red-800 border border-red-200'
-                    }`}>
-                    {test.passed ? '✅ PASS' : '❌ FAIL'}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-white p-4 rounded-lg border">
-                    <h5 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
-                      <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
-                      Tiempo de Ejecución
-                    </h5>
-                    <div className="font-mono text-sm bg-gray-50 p-3 rounded border">
-                      {test.executionTime || 'N/A'}
-                    </div>
-                  </div>
-                  <div className="bg-white p-4 rounded-lg border">
-                    <h5 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
-                      <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-                      Error
-                    </h5>
-                    <div className={`font-mono text-sm p-3 rounded border ${test.error ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700'
-                      }`}>
-                      {test.error || 'Sin errores'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
 
