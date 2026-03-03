@@ -39,13 +39,6 @@ export function useCachedApi<T>(
 ): UseCachedApiReturn<T> {
   const { cacheKey, ttl, enabled = true, onSuccess, onError } = options;
 
-  // Limpiar caché corrupto al inicio (temporal para debugging)
-  useEffect(() => {
-    const cached = cacheService.get<T>(cacheKey);
-    if (cached === null) {
-      console.log(`[useCachedApi] Cache cleared or empty for key: ${cacheKey}`);
-    }
-  }, [cacheKey]);
 
   const [state, setState] = useState<UseCachedApiState<T>>({
     data: null,
@@ -70,14 +63,14 @@ export function useCachedApi<T>(
 
     try {
       const response = await apiCallRef.current();
-      
+
       if (response.success && response.data) {
         // Guardar en caché solo si no es un array vacío
         const isEmpty = Array.isArray(response.data) && response.data.length === 0;
         if (!isEmpty) {
           cacheService.set(cacheKey, response.data, ttl);
         }
-        
+
         setState({
           data: response.data,
           loading: false,
@@ -142,7 +135,7 @@ export function useCachedApi<T>(
 
     // Intentar cargar desde caché primero
     const cachedData = cacheService.get<T>(cacheKey);
-    
+
     if (cachedData) {
       console.log(`[useCachedApi] Found cached data for key: ${cacheKey}`);
       // Hay datos válidos en caché, usarlos inmediatamente
@@ -187,7 +180,12 @@ export function useCachedAvailableExercises() {
     error: null,
   });
 
+  // Prevent concurrent fetches (e.g. React StrictMode double-mount or fast remounts)
+  const isExecutingRef = useRef(false);
+
   const fetchConditional = useCallback(async () => {
+    if (isExecutingRef.current) return;
+    isExecutingRef.current = true;
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
       const storedEtag = cacheService.getEtag(cacheKey);
@@ -205,6 +203,8 @@ export function useCachedAvailableExercises() {
     } catch (error: any) {
       const msg = error.response?.data?.error?.message || error.message || 'Error de conexión';
       setState({ data: null, loading: false, error: msg });
+    } finally {
+      isExecutingRef.current = false;
     }
   }, [cacheKey, ttl]);
 

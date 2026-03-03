@@ -144,13 +144,13 @@ export default function SubmitCode() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === 'Enter') {
         e.preventDefault();
-        handleSubmit();
+        handleSubmitRef.current();
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [formData]);
+  }, []); // handleSubmitRef is stable (a ref), no need to list formData as dep
 
   const resetEditor = () => {
     setShowResults(false);
@@ -276,17 +276,17 @@ export default function SubmitCode() {
                         disabled={loading || !formData.code.trim()}
                         className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-400 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:transform-none"
                       >
-                      {loading ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          <span className="hidden sm:inline">Evaluando...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Play className="w-4 h-4" />
-                          <span className="hidden sm:inline">Enviar</span>
-                        </>
-                      )}
+                        {loading ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            <span className="hidden sm:inline">Evaluando...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-4 h-4" />
+                            <span className="hidden sm:inline">Enviar</span>
+                          </>
+                        )}
                       </button>
                     </div>
                     {showResults && (

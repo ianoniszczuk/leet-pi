@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Trophy } from 'lucide-react';
 import apiService from '@/services/api';
+import { cacheService } from '@/services/cacheService';
+import { CACHE_KEYS, CACHE_CONFIG } from '@/config/cache';
 import type { ExerciseRankingsData, RankingFewestEntry, RankingEarliestEntry } from '@/types';
 
 interface Props {
@@ -103,18 +105,47 @@ export default function ExerciseRankings({ guideNumber, exerciseNumber, refreshK
   const [data, setData] = useState<ExerciseRankingsData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let cancelled = false;
+  // Prevents concurrent fetches (e.g. React StrictMode double-mount)
+  const isExecutingRef = useRef(false);
+
+  const cacheKey = CACHE_KEYS.exerciseRankings(guideNumber, exerciseNumber);
+  const ttl = CACHE_CONFIG.exerciseRankings;
+
+  const fetchRankings = useCallback(async () => {
+    if (isExecutingRef.current) return;
+    isExecutingRef.current = true;
     setLoading(true);
-    apiService
-      .getExerciseRankings(guideNumber, exerciseNumber)
-      .then((res) => {
-        if (!cancelled && res.success && res.data) setData(res.data);
-      })
-      .catch(() => {/* silently ignore ranking errors */ })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [guideNumber, exerciseNumber, refreshKey]);
+    try {
+      const res = await apiService.getExerciseRankings(guideNumber, exerciseNumber);
+      if (res.success && res.data) {
+        cacheService.set(cacheKey, res.data, ttl);
+        setData(res.data);
+      }
+    } catch {
+      // silently ignore ranking errors
+    } finally {
+      setLoading(false);
+      isExecutingRef.current = false;
+    }
+  }, [guideNumber, exerciseNumber, cacheKey, ttl]);
+
+  // Initial load: serve from cache, fall back to network
+  useEffect(() => {
+    const cached = cacheService.get<ExerciseRankingsData>(cacheKey);
+    if (cached) {
+      setData(cached);
+      setLoading(false);
+    } else {
+      fetchRankings();
+    }
+  }, [cacheKey, fetchRankings]);
+
+  // refreshKey increments after a successful submission → bust cache and reload
+  useEffect(() => {
+    if (refreshKey === 0) return;
+    cacheService.invalidate(cacheKey);
+    fetchRankings();
+  }, [refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return (

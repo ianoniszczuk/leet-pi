@@ -9,6 +9,9 @@ export const CACHE_CONFIG = {
   // User Submissions - Se actualiza frecuentemente
   mySubmissions: 2 * 60 * 1000,        // 2 minutos
 
+  // Exercise Rankings - Se actualizan al resolver; TTL corto para verlos rápido
+  exerciseRankings: 1 * 60 * 1000,     // 1 minuto
+
   // Admin Metrics - Aggregaciones costosas; no necesitan tiempo real
   metrics: 5 * 60 * 1000,              // 5 minutos
 } as const;
@@ -20,6 +23,8 @@ export const CACHE_KEYS = {
   userProfile: (userId?: string) => `user:profile:${userId || 'me'}`,
 
   mySubmissions: (userId?: string) => `submissions:${userId || 'me'}`,
+
+  exerciseRankings: (guide: number, exercise: number) => `rankings:g${guide}-e${exercise}`,
 
   // Metrics
   metricsProgress: 'metrics:progress',
