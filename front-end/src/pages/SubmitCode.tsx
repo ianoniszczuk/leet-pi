@@ -485,55 +485,30 @@ function ResultsPanel({ result, error, loading }: { result: SubmissionResponse |
         </div>
 
         {/* Score and Performance */}
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
-          {/* Score */}
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-3 border border-blue-200 flex flex-col overflow-hidden">
-            <div className="flex flex-col items-center gap-1 mb-3">
-              <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center">
-                <span className="text-blue-600 font-bold text-xs">📊</span>
-              </div>
-              <h4 className="font-semibold text-gray-900 text-base whitespace-nowrap">Puntuación</h4>
-            </div>
-            <div className="flex-1 flex flex-col items-center justify-center text-center">
-              <span className="text-3xl font-bold text-blue-600">
-                {result.score}%
-              </span>
-              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                <div
-                  className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full transition-all duration-1000"
-                  style={{ width: `${result.score}%` }}
-                />
-              </div>
-              <div className="flex justify-between text-xs text-gray-600 mt-1 w-full">
-                <span>{result.passedTests} tests</span>
-                <span>{result.totalTests} total</span>
-              </div>
-            </div>
-          </div>
-
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
           {/* Time */}
-          <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl p-3 border border-purple-200 flex flex-col overflow-hidden">
-            <div className="flex flex-col items-center gap-1 mb-3">
-              <div className="w-7 h-7 bg-purple-100 rounded-full flex items-center justify-center">
-                <Clock className="w-3.5 h-3.5 text-purple-600" />
+          <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl p-5 border border-purple-200 flex flex-col overflow-hidden">
+            <div className="flex flex-col items-center gap-2 mb-4">
+              <div className="w-14 h-14 bg-purple-100 rounded-full flex items-center justify-center">
+                <Clock className="w-7 h-7 text-purple-600" />
               </div>
-              <h4 className="font-semibold text-gray-900 text-base whitespace-nowrap">Tiempo</h4>
+              <h4 className="font-bold text-gray-900 text-xl whitespace-nowrap">Tiempo</h4>
             </div>
             <div className="flex-1 flex items-center justify-center text-center">
-              <span className="text-xl font-bold text-purple-600">{result.executionTime}</span>
+              <span className="text-3xl font-bold text-purple-600">{result.executionTime}</span>
             </div>
           </div>
 
           {/* Memory */}
-          <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-3 border border-orange-200 flex flex-col overflow-hidden">
-            <div className="flex flex-col items-center gap-1 mb-3">
-              <div className="w-7 h-7 bg-orange-100 rounded-full flex items-center justify-center">
-                <HardDrive className="w-3.5 h-3.5 text-orange-600" />
+          <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-5 border border-orange-200 flex flex-col overflow-hidden">
+            <div className="flex flex-col items-center gap-2 mb-4">
+              <div className="w-14 h-14 bg-orange-100 rounded-full flex items-center justify-center">
+                <HardDrive className="w-7 h-7 text-orange-600" />
               </div>
-              <h4 className="font-semibold text-gray-900 text-base whitespace-nowrap">Memoria</h4>
+              <h4 className="font-bold text-gray-900 text-xl whitespace-nowrap">Memoria</h4>
             </div>
             <div className="flex-1 flex items-center justify-center text-center">
-              <span className="text-xl font-bold text-orange-600">{result.memoryUsage}</span>
+              <span className="text-3xl font-bold text-orange-600">{result.memoryUsage}</span>
             </div>
           </div>
         </div>
