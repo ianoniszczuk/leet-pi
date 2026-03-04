@@ -1,5 +1,8 @@
 import os
+import select as _select
+import signal
 import subprocess
+import threading
 import time
 import logging
 from datetime import datetime
@@ -70,19 +73,19 @@ def execute_evaluation(request: EvaluationRequest) -> EvaluationResponse:
                                         0, f"{time.time() - start_time:.3f}s")
         
         # Execute test harness
-        execution_result = _execute_test_cases(exe_file, request)
-        
+        execution_result, peak_memory_kb, exec_time_str = _execute_test_cases(exe_file, request)
+
         # Calculate score
         score = round((execution_result.passedTests / execution_result.totalTests) * 100) if execution_result.totalTests > 0 else 0
-        
+
         return EvaluationResponse(
             submissionId=request.submissionId,
             status="completed",
             compilation=compilation_result,
             execution=execution_result,
             score=score,
-            executionTime=f"{time.time() - start_time:.3f}s",
-            memoryUsage="N/A",  # Could be enhanced with actual memory monitoring
+            executionTime=exec_time_str,
+            memoryUsage=_format_memory(peak_memory_kb),
             timestamp=datetime.now().isoformat()
         )
         
@@ -130,14 +133,17 @@ def _compile_code(source_file: str, exe_file: str, test_file: str) -> Compilatio
     except Exception as e:
         return CompilationResult(success=False, errors=str(e))
 
-def _execute_test_cases(exe_file: str, request: EvaluationRequest) -> ExecutionResult:
-    """Execute the compiled test harness for the exercise"""
+def _execute_test_cases(exe_file: str, request: EvaluationRequest) -> tuple[ExecutionResult, int, str]:
+    """Execute the compiled test harness for the exercise.
+    Returns (ExecutionResult, peak_memory_kb, execution_time_str)."""
     test_results = []
     passed_tests = 0
     failed_tests = 0
+    peak_memory_kb = 0
 
-    test_result = _execute_single_test(exe_file, request.timeout)
+    test_result, memory_kb = _execute_single_test(exe_file, request.timeout)
     test_results.append(test_result)
+    peak_memory_kb = max(peak_memory_kb, memory_kb)
 
     if test_result.passed:
         passed_tests += 1
@@ -149,58 +155,122 @@ def _execute_test_cases(exe_file: str, request: EvaluationRequest) -> ExecutionR
         passedTests=passed_tests,
         failedTests=failed_tests,
         testResults=test_results
+    ), peak_memory_kb, test_result.executionTime
+
+def _execute_single_test(exe_file: str, timeout_ms: int) -> tuple[TestResult, int]:
+    """Execute the compiled program once.
+    - Time:   rusage.ru_utime (pure user-space CPU time, no fork/exec/OS overhead).
+    - Memory: peak VmRSS read from /proc/<pid>/status while the process runs
+              (reflects only the exec'd binary + its libraries, not the Python parent).
+    Returns (TestResult, peak_memory_kb)."""
+    timeout_s = timeout_ms / 1000.0
+
+    proc = subprocess.Popen(
+        [exe_file],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
     )
+    stdout_fd = proc.stdout.fileno()
+    stderr_fd = proc.stderr.fileno()
 
-def _execute_single_test(exe_file: str, timeout_ms: int) -> TestResult:
-    """Execute the compiled program once and report the result"""
-    test_start = time.time()
-    
-    try:
-        run_result = subprocess.run(
-            [exe_file],
-            capture_output=True,
-            text=True,
-            timeout=timeout_ms / 1000.0  # Convert to seconds
-        )
-        
-        execution_time = time.time() - test_start
+    # Monitor VmRSS from /proc while the process runs.
+    # This reads the actual RSS of the exec'd binary, not the Python parent's RSS.
+    peak_rss_kb = [0]
+    stop_event = threading.Event()
 
-        if run_result.returncode == 0:
-            return TestResult(
-                testNumber=1,
-                passed=True,
-                executionTime=f"{execution_time:.3f}s",
-                error=None
-            )
+    def _monitor_rss() -> None:
+        status_path = f"/proc/{proc.pid}/status"
+        while not stop_event.is_set():
+            try:
+                with open(status_path) as f:
+                    for line in f:
+                        if line.startswith("VmRSS:"):
+                            kb = int(line.split()[1])
+                            if kb > peak_rss_kb[0]:
+                                peak_rss_kb[0] = kb
+                            break
+            except (FileNotFoundError, ProcessLookupError, ValueError):
+                break
+            stop_event.wait(0.001)  # poll every 1 ms
 
-        error_details = _build_error_message(
-            run_result.returncode,
-            run_result.stdout,
-            run_result.stderr
-        )
+    mon = threading.Thread(target=_monitor_rss, daemon=True)
+    mon.start()
+
+    timed_out = False
+    stdout_chunks: list[bytes] = []
+    stderr_chunks: list[bytes] = []
+    active = {stdout_fd, stderr_fd}
+    deadline = time.monotonic() + timeout_s
+
+    while active:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            timed_out = True
+            proc.kill()
+            break
+        ready, _, _ = _select.select(list(active), [], [], min(remaining, 0.05))
+        for fd in ready:
+            chunk = os.read(fd, 4096)
+            if not chunk:
+                active.discard(fd)
+            elif fd == stdout_fd:
+                stdout_chunks.append(chunk)
+            else:
+                stderr_chunks.append(chunk)
+
+    stop_event.set()
+    mon.join(timeout=0.2)
+    proc.stdout.close()
+    proc.stderr.close()
+
+    # wait4 gives per-child rusage without polluting RUSAGE_CHILDREN
+    _, raw_status, rusage = os.wait4(proc.pid, 0)
+
+    # Pure user-space CPU time — excludes fork/exec/pipe/OS overhead entirely
+    cpu_time_s: float = rusage.ru_utime
+    peak_memory_kb: int = peak_rss_kb[0]  # from /proc monitoring
+
+    if timed_out:
         return TestResult(
             testNumber=1,
             passed=False,
-            executionTime=f"{execution_time:.3f}s",
-            error=error_details
-        )
-            
-    except subprocess.TimeoutExpired:
-        execution_time = time.time() - test_start
-        return TestResult(
-            testNumber=1,
-            passed=False,
-            executionTime=f"{execution_time:.3f}s",
+            executionTime=_format_time(cpu_time_s),
             error="Timeout"
-        )
-    except Exception as e:
-        execution_time = time.time() - test_start
+        ), peak_memory_kb
+
+    returncode = os.waitstatus_to_exitcode(raw_status)
+    stdout = b"".join(stdout_chunks).decode("utf-8", errors="replace")
+    stderr = b"".join(stderr_chunks).decode("utf-8", errors="replace")
+
+    if returncode == 0:
         return TestResult(
             testNumber=1,
-            passed=False,
-            executionTime=f"{execution_time:.3f}s",
-            error=str(e)
-        )
+            passed=True,
+            executionTime=_format_time(cpu_time_s),
+            error=None
+        ), peak_memory_kb
+
+    error_details = _build_error_message(returncode, stdout, stderr)
+    return TestResult(
+        testNumber=1,
+        passed=False,
+        executionTime=_format_time(cpu_time_s),
+        error=error_details
+    ), peak_memory_kb
+
+def _format_memory(kb: int) -> str:
+    """Convert a peak VmRSS value in KB to a human-readable string."""
+    if kb <= 0:
+        return "N/A"
+    if kb >= 1024:
+        return f"{kb / 1024:.1f} MB"
+    return f"{kb} KB"
+
+def _format_time(seconds: float) -> str:
+    """Format CPU time: always show ms for sub-second runs, s otherwise."""
+    if seconds < 1.0:
+        return f"{seconds * 1000:.2f} ms"
+    return f"{seconds:.3f} s"
 
 def _build_error_message(return_code: int, stdout: str, stderr: str) -> str:
     """Build a concise error message from process output"""
