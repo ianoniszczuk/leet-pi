@@ -32,7 +32,7 @@ async function makeUserAdmin() {
       process.exit(1);
     }
 
-    console.log(`✅ Usuario encontrado: ${user.firstName} ${user.lastName} (ID: ${user.id})`);
+    console.log(`✅ Usuario encontrado: ${user.fullName} (ID: ${user.id})`);
 
     // Verificar si ya es admin
     const userRolesRepository = AppDataSource.getRepository(UserRoles);
@@ -59,13 +59,13 @@ async function makeUserAdmin() {
     console.log(`✅ Rol SUPERADMIN asignado exitosamente a ${email}`);
     console.log(`\nUsuario actualizado:`);
     console.log(`  - Email: ${user.email}`);
-    console.log(`  - Nombre: ${user.firstName} ${user.lastName}`);
+    console.log(`  - Nombre: ${user.fullName}`);
     console.log(`  - Habilitado: ${user.enabled ? 'Sí' : 'No'}`);
-    console.log(`  - Rol: admin`);
+    console.log(`  - Rol: SUPERADMIN`);
 
     process.exit(0);
   } catch (error) {
-    console.error('❌ Error al asignar rol admin:', error);
+    console.error('❌ Error al asignar rol SUPERADMIN:', error);
     process.exit(1);
   } finally {
     if (AppDataSource.isInitialized) {
