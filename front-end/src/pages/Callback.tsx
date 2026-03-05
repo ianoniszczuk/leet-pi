@@ -29,7 +29,6 @@ export default function Callback() {
           logoutParams: {
             returnTo: window.location.origin,
           },
-          federated: true,
         });
         return;
       }

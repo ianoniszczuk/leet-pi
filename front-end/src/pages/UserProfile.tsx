@@ -4,7 +4,7 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 import { useCachedUserProfile, useCachedMySubmissions } from '@/hooks/useCachedApi';
 import EditProfileModal from '@/components/ui/EditProfileModal';
-import type { UserProfile, Submission } from '@/types';
+import type { UserProfile } from '@/types';
 
 export default function UserProfile() {
   const { user: auth0User } = useAuth();
@@ -19,7 +19,6 @@ export default function UserProfile() {
 
   const {
     data: submissions,
-    loading: submissionsLoading,
   } = useCachedMySubmissions();
 
   if (profileLoading) {

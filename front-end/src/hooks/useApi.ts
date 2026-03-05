@@ -23,7 +23,7 @@ export function useApi<T>(
     error: null,
   });
 
-  const execute = useCallback(async (...args: any[]): Promise<T> => {
+  const execute = useCallback(async (): Promise<T> => {
     setState(prev => ({ ...prev, loading: true, error: null }));
     
     try {

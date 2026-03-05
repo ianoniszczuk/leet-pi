@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Code2, CheckCircle, Users, Zap, ArrowRight, Github } from 'lucide-react';
+import { Code2, CheckCircle, Users, Zap, Github } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import AuthButton from '@/components/auth/AuthButton';
 

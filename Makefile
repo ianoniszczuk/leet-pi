@@ -1,6 +1,6 @@
 .PHONY: up down build logs ps restart clean
 
-COMPOSE := docker compose -f docker-compose.yml
+COMPOSE := docker compose -f docker-compose.yml --env-file ./front-end/.env
 
 ## Inicia todos los servicios en background
 up:

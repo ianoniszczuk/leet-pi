@@ -58,7 +58,7 @@ export const CacheUtils = {
     const keyGenerator = CACHE_KEYS[key];
 
     if (typeof keyGenerator === 'function') {
-      return keyGenerator(...params);
+      return (keyGenerator as (...args: any[]) => string)(...params);
     }
 
     return keyGenerator;
@@ -71,7 +71,7 @@ export const CacheUtils = {
     return Object.values(CACHE_KEYS).some(keyGenerator => {
       if (typeof keyGenerator === 'function') {
         // Para funciones, verificamos si la clave coincide con algún patrón
-        return key.includes(keyGenerator().split(':')[0]);
+        return key.includes((keyGenerator as (...args: any[]) => string)('').split(':')[0]);
       }
       return key === keyGenerator;
     });

@@ -55,6 +55,9 @@ services:
     environment:
       # Sobrescribe para apuntar a los servicios internos de Docker
       DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-leetpi_db}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
       CODE_JUDGE_URL: http://code-judge:5000
       OPENAPI_PATH: /docs/openapi.yaml
     ports:
@@ -72,3 +75,28 @@ services:
     restart: unless-stopped
     networks:
       - leet-pi-net
+
+  front-end:
+    build:
+      context: ./front-end
+      target: prod
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3001/api}
+        VITE_AUTH0_DOMAIN: ${VITE_AUTH0_DOMAIN}
+        VITE_AUTH0_CLIENT_ID: ${VITE_AUTH0_CLIENT_ID}
+        VITE_AUTH0_AUDIENCE: ${VITE_AUTH0_AUDIENCE}
+        VITE_AUTH0_REDIRECT_URI: ${VITE_AUTH0_REDIRECT_URI:-http://localhost:8080/callback}
+        VITE_APP_NAME: ${VITE_APP_NAME:-Leet PI}
+        VITE_APP_VERSION: ${VITE_APP_VERSION:-1.0.0}
+    ports:
+      - "8080:80"
+    depends_on:
+      - back-end
+    restart: unless-stopped
+    networks:
+      - leet-pi-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3

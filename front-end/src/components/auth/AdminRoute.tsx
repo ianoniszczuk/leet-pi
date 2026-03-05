@@ -15,7 +15,6 @@ export default function AdminRoute({
 }: AdminRouteProps) {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { isAdmin, isLoading: adminLoading } = useAdmin();
-  const navigate = useNavigate();
 
   if (authLoading || adminLoading) {
     return (

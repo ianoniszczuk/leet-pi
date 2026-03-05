@@ -507,7 +507,7 @@ export default function GuidesTab() {
 
   useEffect(() => { loadGuides(); }, []);
 
-  const withAction = async (fn: () => Promise<void>) => {
+  const withAction = async (fn: () => Promise<unknown>) => {
     setActionLoading(true);
     try {
       await fn();

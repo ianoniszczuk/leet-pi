@@ -24,22 +24,25 @@ async function makeUserAdmin() {
 
     console.log(`Buscando usuario con email: ${email}`);
 
-    // Buscar usuario por email
-    const user = await userService.findByEmail(email);
+    // Buscar usuario por email, crearlo si no existe
+    let user = await userService.findByEmail(email);
 
     if (!user) {
-      console.error(`❌ Usuario con email "${email}" no encontrado`);
-      process.exit(1);
+      console.log(`⚠️  Usuario no encontrado, creando nuevo usuario con email "${email}"...`);
+      const userRepository = AppDataSource.getRepository((await import('../src/entities/user.entity.ts')).default);
+      user = userRepository.create({ email, sub: null, fullName: null, enabled: true });
+      user = await userRepository.save(user);
+      console.log(`✅ Usuario creado (ID: ${user.id})`);
+    } else {
+      console.log(`✅ Usuario encontrado: ${user.fullName ?? email} (ID: ${user.id})`);
     }
-
-    console.log(`✅ Usuario encontrado: ${user.fullName} (ID: ${user.id})`);
 
     // Verificar si ya es admin
     const userRolesRepository = AppDataSource.getRepository(UserRoles);
     const existingAdminRole = await userRolesRepository.findOne({
       where: {
         userId: user.id,
-        roleId: 'admin',
+        roleId: 'superadmin',
       },
     });
 
