@@ -70,7 +70,7 @@ services:
     volumes:
       - ./back-end/src:/app/src                        # hot-reload del código TS
       - ./docs:/docs:ro
-      - ./back-end/scripts/data:/app/scripts/data:ro
+      - ./back-end/scripts:/app/scripts:ro
       - backend_node_modules:/app/node_modules         # preserva node_modules de la imagen
     restart: unless-stopped
     networks:
