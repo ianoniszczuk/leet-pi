@@ -1,7 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
+import logger from "./logger.ts";
 
 export const errorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
-  console.error('Error:', err);
+  logger.error('Error:', err);
 
   // Default error
   let statusCode = err.statusCode || 500;

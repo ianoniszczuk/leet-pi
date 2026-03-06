@@ -144,7 +144,7 @@ class CacheService {
         }
       });
     } catch (error) {
-      console.warn('Error during cache cleanup:', error);
+      logger.warn('Error during cache cleanup:', error);
     }
   }
 

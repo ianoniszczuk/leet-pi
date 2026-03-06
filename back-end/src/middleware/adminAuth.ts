@@ -5,6 +5,7 @@ import { UserRoles } from '../entities/user-roles.entity.ts';
 import { authenticateAuth } from './auth.ts';
 import userService from '../services/userService.ts';
 import { formatErrorResponse } from '../utils/responseFormatter.ts';
+import logger from './logger.ts';
 
 /**
  * Helper that runs authentication then checks whether the user has at least
@@ -38,7 +39,7 @@ function requireRoles(allowedRoles: string[]) {
 
         next();
       } catch (error) {
-        console.error('Error checking role:', error);
+        logger.error('Error checking role:', error);
         res.status(500).json(formatErrorResponse('Internal server error', 500));
       }
     });

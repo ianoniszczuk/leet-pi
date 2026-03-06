@@ -5,7 +5,7 @@ import config from '../config/config.ts';
 import jwtService from '../services/jwtService.ts';
 import type { InternalTokenPayload } from '../services/jwtService.ts';
 import userService from '@/services/userService.ts';
-import { log } from 'console';
+import logger from './logger.ts';
 
 // JWKS client para obtener las claves públicas de Auth0
 const client = jwksClient({
@@ -111,7 +111,7 @@ export const authenticateAuth = (req: Request, res: Response, next: NextFunction
     try {
       authPayload = jwtService.verifyAuthToken(authToken);
     } catch (err) {
-      console.warn('Access token invalid or expired, attempting refresh.');
+      logger.warn('Access token invalid or expired, attempting refresh.');
     }
   }
 
@@ -146,7 +146,7 @@ export const authenticateAuth = (req: Request, res: Response, next: NextFunction
 
     next();
   } catch (error) {
-    console.error('Refresh token invalid:', error);
+    logger.error('Refresh token invalid:', error);
     return res.status(403).json({
       success: false,
       error: {

@@ -5,7 +5,6 @@ import cors from 'cors'
 import helmet from 'helmet'
 import config from '@/config/config.ts'
 import routes from '@/routes/index.ts'
-import logger from '@/middleware/logger.ts'
 import { errorHandler } from '@/middleware/errorHandler.ts'
 import { printAuth0Config } from './utils/authTest.ts'
 import swaggerUi from 'swagger-ui-express'
@@ -27,9 +26,6 @@ app.use(cors({
   credentials: true,
   exposedHeaders: ['X-Auth-Token', 'X-Refresh-Token'],
 }));
-
-// Logging middleware
-app.use(logger);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));

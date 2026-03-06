@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import type { User } from '../entities/user.entity.ts';
 import userService from '../services/userService.ts';
 import { formatSuccessResponse, formatErrorResponse } from '../utils/responseFormatter.ts';
+import logger from '../middleware/logger.ts';
 
 export class UserController {
   private userDto(user: User) {
@@ -34,7 +35,7 @@ export class UserController {
         'User profile retrieved successfully',
       ));
     } catch (error) {
-      console.error('Error getting user profile:', error);
+      logger.error('Error getting user profile:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));
     }
   }
@@ -67,7 +68,7 @@ export class UserController {
 
       res.status(200).json(formatSuccessResponse(this.userDto(updated), 'Profile updated successfully'));
     } catch (error) {
-      console.error('Error updating user profile:', error);
+      logger.error('Error updating user profile:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));
     }
   }
@@ -91,7 +92,7 @@ export class UserController {
 
       res.status(200).json(formatSuccessResponse(this.userDto(user), 'Current user retrieved successfully'));
     } catch (error) {
-      console.error('Error getting current user:', error);
+      logger.error('Error getting current user:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));
     }
   }
@@ -110,7 +111,7 @@ export class UserController {
 
       res.status(200).json(formatSuccessResponse(usersData, 'Users retrieved successfully'));
     } catch (error) {
-      console.error('Error getting all users:', error);
+      logger.error('Error getting all users:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));
     }
   }
@@ -134,7 +135,7 @@ export class UserController {
         submissionCount: user.submissions?.length || 0,
       }, 'User retrieved successfully'));
     } catch (error) {
-      console.error('Error getting user by ID:', error);
+      logger.error('Error getting user by ID:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));
     }
   }
@@ -155,7 +156,7 @@ export class UserController {
 
       res.status(200).json(formatSuccessResponse(null, 'User deleted successfully'));
     } catch (error) {
-      console.error('Error deleting user:', error);
+      logger.error('Error deleting user:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));
     }
   }

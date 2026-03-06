@@ -1,7 +1,8 @@
 import axios from 'axios'
 import FormData from 'form-data'
 import { v4 as uuidv4 } from 'uuid'
-import config from '@/config/config.ts'
+import config from '../config/config.ts'
+import logger from '../middleware/logger.ts';
 
 class CodeJudgeService {
   private client;
@@ -31,7 +32,7 @@ class CodeJudgeService {
         timestamp: new Date().toISOString(),
       };
 
-      console.log(`Submitting solution for guide ${guideNumber}, exercise ${exerciseNumber} with ID: ${submissionId}`);
+      logger.info(`Submitting solution for guide ${guideNumber}, exercise ${exerciseNumber} with ID: ${submissionId}`);
 
       const response = await this.client.post('/evaluate', payload);
 
@@ -41,7 +42,7 @@ class CodeJudgeService {
         results: response.data,
       };
     } catch (error: any) {
-      console.error('Error submitting solution to code judge:', error.message);
+      logger.error('Error submitting solution to code judge:', error.message);
 
       if (error.code === 'ECONNREFUSED') {
         throw new Error('Code judge service is unavailable');
@@ -67,7 +68,7 @@ class CodeJudgeService {
         timeout: 30000,
       });
     } catch (error: any) {
-      console.error('Error uploading test file to code judge:', error.message);
+      logger.error('Error uploading test file to code judge:', error.message);
 
       if (error.code === 'ECONNREFUSED' || error.code === 'ECONNRESET') {
         throw new Error('Code judge service is unavailable');
@@ -87,7 +88,7 @@ class CodeJudgeService {
         return;
       }
 
-      console.error('Error deleting test file from code judge:', error.message);
+      logger.error('Error deleting test file from code judge:', error.message);
 
       if (error.code === 'ECONNREFUSED' || error.code === 'ECONNRESET') {
         throw new Error('Code judge service is unavailable');
@@ -105,7 +106,7 @@ class CodeJudgeService {
       });
       return Buffer.from(response.data);
     } catch (error: any) {
-      console.error('Error downloading test file from code judge:', error.message);
+      logger.error('Error downloading test file from code judge:', error.message);
 
       if (error.response?.status === 404) {
         throw new Error('Test file not found in code judge');

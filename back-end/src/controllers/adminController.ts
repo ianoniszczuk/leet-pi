@@ -11,6 +11,7 @@ import { Exercise } from '../entities/exercise.entity.ts';
 import { Try } from '../entities/try.view.ts';
 import { Submission } from '../entities/submission.entity.ts';
 import codeJudgeService from '../services/codeJudgeService.ts';
+import logger from '../middleware/logger.ts';
 
 function parsePositiveInt(value: unknown): number | null {
   const n = Number(value);
@@ -67,7 +68,7 @@ export class AdminController {
       const statusCode = result.errors.length > 0 ? 207 : 200;
       res.status(statusCode).json(formatSuccessResponse(response, 'CSV processed successfully'));
     } catch (error: any) {
-      console.error('Error uploading CSV:', error);
+      logger.error('Error uploading CSV:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));
     }
   }
@@ -88,7 +89,7 @@ export class AdminController {
         disabled: disabledCount,
       }, 'User status retrieved successfully'));
     } catch (error: any) {
-      console.error('Error getting user status:', error);
+      logger.error('Error getting user status:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));
     }
   }
@@ -118,7 +119,7 @@ export class AdminController {
       }));
       res.status(200).json(formatSuccessResponse({ users: result, total, page, totalPages }, 'Users retrieved successfully'));
     } catch (error) {
-      console.error('Error getting user list:', error);
+      logger.error('Error getting user list:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));
     }
   }
@@ -195,7 +196,7 @@ export class AdminController {
         roles: (updated!.userRoles ?? []).map((r) => r.roleId),
       }, 'User updated successfully'));
     } catch (error) {
-      console.error('Error updating user enabled:', error);
+      logger.error('Error updating user enabled:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));
     }
   }
@@ -278,7 +279,7 @@ export class AdminController {
 
       res.status(200).json(formatSuccessResponse({ userId, roles: updatedRoles }, 'User roles updated successfully'));
     } catch (error) {
-      console.error('Error updating user roles:', error);
+      logger.error('Error updating user roles:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));
     }
   }
@@ -311,7 +312,7 @@ export class AdminController {
 
       res.status(200).json(formatSuccessResponse(result, 'Guides retrieved successfully'));
     } catch (error) {
-      console.error('Error getting guides:', error);
+      logger.error('Error getting guides:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));
     }
   }
@@ -358,7 +359,7 @@ export class AdminController {
         deadline: savedGuide.deadline,
       }, 'Guide created successfully'));
     } catch (error) {
-      console.error('Error creating guide:', error);
+      logger.error('Error creating guide:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));
     }
   }
@@ -415,7 +416,7 @@ export class AdminController {
         deadline: savedGuide.deadline,
       }, 'Guide updated successfully'));
     } catch (error) {
-      console.error('Error updating guide:', error);
+      logger.error('Error updating guide:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));
     }
   }
@@ -441,7 +442,7 @@ export class AdminController {
       await guideRepository.remove(guide);
       res.status(200).json(formatSuccessResponse(null, 'Guide deleted successfully'));
     } catch (error) {
-      console.error('Error deleting guide:', error);
+      logger.error('Error deleting guide:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));
     }
   }
@@ -493,7 +494,7 @@ export class AdminController {
         functionSignature: savedExercise.functionSignature ?? null,
       }, 'Exercise created successfully'));
     } catch (error) {
-      console.error('Error creating exercise:', error);
+      logger.error('Error creating exercise:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));
     }
   }
@@ -547,7 +548,7 @@ export class AdminController {
         functionSignature: savedExercise.functionSignature ?? null,
       }, 'Exercise updated successfully'));
     } catch (error) {
-      console.error('Error updating exercise:', error);
+      logger.error('Error updating exercise:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));
     }
   }
@@ -610,7 +611,7 @@ export class AdminController {
 
       res.status(200).json(formatSuccessResponse(result, 'User details retrieved successfully'));
     } catch (error) {
-      console.error('Error getting user details:', error);
+      logger.error('Error getting user details:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));
     }
   }
@@ -641,14 +642,14 @@ export class AdminController {
         try {
           await codeJudgeService.deleteTestFile(parsedGuideNumber, parsedExerciseNumber);
         } catch (judgeErr: any) {
-          console.warn(`Could not delete test file for exercise ${parsedGuideNumber}/${parsedExerciseNumber} from code judge:`, judgeErr.message);
+          logger.warn(`Could not delete test file for exercise ${parsedGuideNumber}/${parsedExerciseNumber} from code judge:`, judgeErr.message);
         }
       }
 
       await exerciseRepository.remove(exercise);
       res.status(200).json(formatSuccessResponse(null, 'Exercise deleted successfully'));
     } catch (error) {
-      console.error('Error deleting exercise:', error);
+      logger.error('Error deleting exercise:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));
     }
   }
@@ -704,7 +705,7 @@ export class AdminController {
         hasTestFile: savedExercise.hasTestFile,
       }, 'Test file uploaded successfully'));
     } catch (error) {
-      console.error('Error uploading test file:', error);
+      logger.error('Error uploading test file:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));
     }
   }
@@ -749,7 +750,7 @@ export class AdminController {
         hasTestFile: savedExercise.hasTestFile,
       }, 'Test file deleted successfully'));
     } catch (error) {
-      console.error('Error deleting test file:', error);
+      logger.error('Error deleting test file:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));
     }
   }
@@ -793,7 +794,7 @@ export class AdminController {
       res.setHeader('Content-Disposition', `attachment; filename="exercise-${parsedExerciseNumber}.c"`);
       res.status(200).send(fileBuffer);
     } catch (error) {
-      console.error('Error downloading test file:', error);
+      logger.error('Error downloading test file:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));
     }
   }

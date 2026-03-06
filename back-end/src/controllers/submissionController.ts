@@ -7,6 +7,7 @@ import { Submission } from '../entities/submission.entity.ts';
 import { Exercise } from '../entities/exercise.entity.ts';
 import { Guide } from '../entities/guide.entity.ts';
 import { formatSuccessResponse, formatErrorResponse } from '../utils/responseFormatter.ts';
+import logger from '../middleware/logger.ts';
 
 class SubmissionController {
   async submitSolution(req: Request, res: Response, next: NextFunction) {
@@ -24,7 +25,7 @@ class SubmissionController {
         return;
       }
 
-      console.log(`Received submission for exercise ${exerciseNumber} in guide ${guideNumber} from user ${req.user.sub}`);
+      logger.info(`Received submission for exercise ${exerciseNumber} in guide ${guideNumber} from user ${req.user.sub}`);
 
       // Sincronizar usuario con Auth0
       const user = await userService.syncFromAuth0(req.user);
@@ -120,7 +121,7 @@ class SubmissionController {
       }, 'Solution submitted successfully'));
 
     } catch (error) {
-      console.error('Error submitting solution:', error);
+      logger.error('Error submitting solution:', error);
       next(error);
     }
   }
@@ -134,6 +135,7 @@ class SubmissionController {
       res.status(200).json(formatSuccessResponse(status, 'Submission status retrieved successfully'));
 
     } catch (error) {
+      logger.error('Error getting submission status:', error);
       next(error);
     }
   }
@@ -169,7 +171,7 @@ class SubmissionController {
       res.status(200).json(formatSuccessResponse(submissionsData, 'User submissions retrieved successfully'));
 
     } catch (error) {
-      console.error('Error getting user submissions:', error);
+      logger.error('Error getting user submissions:', error);
       next(error);
     }
   }
@@ -220,7 +222,7 @@ class SubmissionController {
       res.status(200).json(formatSuccessResponse(submissionData, 'Submission retrieved successfully'));
 
     } catch (error) {
-      console.error('Error getting submission by ID:', error);
+      logger.error('Error getting submission by ID:', error);
       next(error);
     }
   }
@@ -310,18 +312,18 @@ class SubmissionController {
 
       const earliestCompletion = hasDeadline
         ? (earliestRows as { fullName: string | null; submittedAt: string; deadline: string }[]).map(
-            (row, i) => ({
-              rank: i + 1,
-              fullName: row.fullName ?? null,
-              submittedAt: row.submittedAt,
-              marginMs: new Date(deadline!).getTime() - new Date(row.submittedAt).getTime(),
-            })
-          )
+          (row, i) => ({
+            rank: i + 1,
+            fullName: row.fullName ?? null,
+            submittedAt: row.submittedAt,
+            marginMs: new Date(deadline!).getTime() - new Date(row.submittedAt).getTime(),
+          })
+        )
         : [];
 
       res.status(200).json(formatSuccessResponse({ hasDeadline, fewestAttempts, earliestCompletion }, 'Rankings retrieved successfully'));
     } catch (error) {
-      console.error('Error getting rankings:', error);
+      logger.error('Error getting rankings:', error);
       next(error);
     }
   }
@@ -370,7 +372,7 @@ class SubmissionController {
       res.status(200).json(formatSuccessResponse(guidesWithExercises, 'Available exercises retrieved successfully'));
 
     } catch (error) {
-      console.error('Error getting available exercises:', error);
+      logger.error('Error getting available exercises:', error);
       next(error);
     }
   }
