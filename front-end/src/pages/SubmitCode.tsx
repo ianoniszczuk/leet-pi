@@ -6,6 +6,7 @@ import SessionExpiredModal from '@/components/ui/SessionExpiredModal';
 import ExerciseRankings from '@/components/rankings/ExerciseRankings';
 import { useSubmission } from '@/hooks/useApi';
 import { useCachedAvailableExercises } from '@/hooks/useCachedApi';
+import logger from '@/utils/logger';
 import type { SubmissionResponse } from '@/types';
 
 const DEFAULT_CODE = `#include <stdio.h>
@@ -95,7 +96,7 @@ export default function SubmitCode() {
         setRankingsRefreshKey(prev => prev + 1);
       }
     } catch (error: any) {
-      console.error('Error submitting code:', error);
+      logger.error('Error submitting code:', error);
       setShowResults(true);
       // El error ya está manejado por el hook useSubmission
     }

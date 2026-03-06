@@ -4,6 +4,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { API_CONFIG, API_ENDPOINTS } from '@/config/api';
 import apiService from '@/services/api';
+import logger from '@/utils/logger';
 
 export default function Callback() {
   const navigate = useNavigate();
@@ -38,7 +39,7 @@ export default function Callback() {
     };
 
     if (error) {
-      console.error('Auth0 Error:', error);
+      logger.error('Auth0 Error:', error);
       redirectHome(error.message, true);
       return () => {
         cancelled = true;
@@ -76,7 +77,7 @@ export default function Callback() {
           }
 
           if (response.status === 401 || response.status === 403) {
-            console.warn('Acceso denegado para el usuario actual:', errorMessage);
+            logger.warn('Acceso denegado para el usuario actual:', errorMessage);
             redirectHome(errorMessage, true);
             return;
           }
@@ -94,7 +95,7 @@ export default function Callback() {
         const refreshToken = response.headers.get('x-refresh-token');
 
         if (!authToken || !refreshToken) {
-          console.error('Missing authentication tokens in response headers');
+          logger.error('Missing authentication tokens in response headers');
           redirectHome('No se pudo completar la autenticación');
           return;
         }
@@ -110,7 +111,7 @@ export default function Callback() {
           navigate('/');
         }
       } catch (tokenExchangeError) {
-        console.error('Error durante el intercambio de tokens:', tokenExchangeError);
+        logger.error('Error durante el intercambio de tokens:', tokenExchangeError);
 
         const message =
           tokenExchangeError instanceof Error

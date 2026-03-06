@@ -1,3 +1,5 @@
+import logger from '@/utils/logger';
+
 interface CacheEntry<T = any> {
   data: T;
   timestamp: number;
@@ -17,7 +19,7 @@ class CacheService {
       const cached = localStorage.getItem(cacheKey);
 
       if (!cached) {
-        //console.log(`[CacheService] No cached data found for key: ${key}`);
+        logger.log(`[CacheService] No cached data found for key: ${key}`);
         return null;
       }
 
@@ -25,15 +27,15 @@ class CacheService {
 
       // Verificar si ha expirado
       if (this.isEntryExpired(entry)) {
-        //console.log(`[CacheService] Cache expired for key: ${key}`);
+        logger.log(`[CacheService] Cache expired for key: ${key}`);
         this.invalidate(key);
         return null;
       }
 
-      //console.log(`[CacheService] Found valid cached data for key: ${key}`);
+      logger.log(`[CacheService] Found valid cached data for key: ${key}`);
       return entry.data;
     } catch (error) {
-      console.warn('Error reading from cache:', error);
+      logger.warn('Error reading from cache:', error);
       this.invalidate(key);
       return null;
     }
@@ -53,9 +55,9 @@ class CacheService {
       };
 
       localStorage.setItem(cacheKey, JSON.stringify(entry));
-      //console.log(`[CacheService] Saved to cache: ${key}, expires in ${ttl}ms`);
+      logger.log(`[CacheService] Saved to cache: ${key}, expires in ${ttl}ms`);
     } catch (error) {
-      console.warn('Error writing to cache:', error);
+      logger.warn('Error writing to cache:', error);
     }
   }
 
@@ -79,7 +81,7 @@ class CacheService {
       const cacheKey = this.getCacheKey(key);
       localStorage.removeItem(cacheKey);
     } catch (error) {
-      console.warn('Error invalidating cache:', error);
+      logger.warn('Error invalidating cache:', error);
     }
   }
 
@@ -95,7 +97,7 @@ class CacheService {
         }
       });
     } catch (error) {
-      console.warn('Error clearing all cache:', error);
+      logger.warn('Error clearing all cache:', error);
     }
   }
 
@@ -114,7 +116,7 @@ class CacheService {
       const entry: CacheEntry = JSON.parse(cached);
       return this.isEntryExpired(entry);
     } catch (error) {
-      console.warn('Error checking cache expiration:', error);
+      logger.warn('Error checking cache expiration:', error);
       return true;
     }
   }
@@ -172,7 +174,7 @@ class CacheService {
         }
       });
     } catch (error) {
-      console.warn('Error getting cache info:', error);
+      logger.warn('Error getting cache info:', error);
     }
 
     return info;

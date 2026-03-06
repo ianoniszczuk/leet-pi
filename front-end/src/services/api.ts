@@ -2,6 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import { API_CONFIG, API_ENDPOINTS } from '@/config/api';
 import { cacheService } from './cacheService';
 import { CACHE_KEYS, CACHE_CONFIG } from '@/config/cache';
+import logger from '@/utils/logger';
 import type { ApiResponse, User, UserProfile, Submission, SubmissionResponse, SubmissionForm, GuideWithExercises, UserStatus, CSVUploadResult, AdminGuide, ExerciseRankingsData, AdminUser, UserDetailData, PaginatedAdminUsersResponse, StudentProgressMetric, AvgResolutionTimeMetric, ExerciseAttemptsMetric, ActiveStudentsMetric, ExerciseErrorRateMetric, StudentAtRiskMetric, ProgressDistributionMetric, WeeklyActivityMetric, ExerciseCompletionMatrixMetric } from '@/types';
 
 const AUTH_TOKEN_KEY = 'auth_token';
@@ -60,7 +61,7 @@ class ApiService {
           localStorage.removeItem(AUTH_TOKEN_KEY);
           localStorage.removeItem(REFRESH_TOKEN_KEY);
           // No redirigir automáticamente, dejar que el componente maneje el error
-          console.warn('Authentication token expired or invalid');
+          logger.warn('Authentication token expired or invalid');
         }
         return Promise.reject(error);
       }
@@ -133,7 +134,7 @@ class ApiService {
 
   async getExerciseRankings(guideNumber: number, exerciseNumber: number): Promise<ApiResponse<ExerciseRankingsData>> {
     const response = await this.api.get(API_ENDPOINTS.submissions.rankings(guideNumber, exerciseNumber));
-    console.log(response.data);
+    logger.log(response.data);
     return response.data;
   }
 

@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { X, Upload, FileText, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { apiService } from '@/services/api';
+import logger from '@/utils/logger';
 import type { CSVUploadResult } from '@/types';
 
 interface CSVUploadModalProps {
@@ -71,7 +72,7 @@ export default function CSVUploadModal({ isOpen, onClose }: CSVUploadModalProps)
         if (response.data) setUploadResult(response.data);
       }
     } catch (err: any) {
-      console.error('Error uploading CSV:', err);
+      logger.error('Error uploading CSV:', err);
       setError(err.response?.data?.error?.message || 'Error al subir el archivo CSV');
     } finally {
       setIsUploading(false);

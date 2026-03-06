@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import apiService from '@/services/api';
+import logger from '@/utils/logger';
 import type { User } from '@/types';
 
 export const useAdmin = () => {
@@ -53,7 +54,7 @@ export const useAdmin = () => {
           setUser(null);
         }
       } catch (error) {
-        console.error('Error checking admin status:', error);
+        logger.error('Error checking admin status:', error);
         setIsAdmin(false);
         setIsSuperAdmin(false);
         setUser(null);

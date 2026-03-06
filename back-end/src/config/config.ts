@@ -12,7 +12,9 @@ const config = {
     timeout: parseInt(process.env.CODE_JUDGE_TIMEOUT || "30000"),
   },
   cors: {
-    origin: process.env.CORS_ORIGIN,
+    origin: process.env.CORS_ORIGIN?.includes(',')
+      ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+      : process.env.CORS_ORIGIN,
   },
   logging: {
     level: process.env.LOG_LEVEL,

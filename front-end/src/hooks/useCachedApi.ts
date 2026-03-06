@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { cacheService } from '@/services/cacheService';
 import { apiService } from '@/services/api';
 import { CACHE_KEYS, CACHE_CONFIG } from '@/config/cache';
+import logger from '@/utils/logger';
 import type { ApiResponse, GuideWithExercises } from '@/types';
 
 interface UseCachedApiOptions {
@@ -131,13 +132,13 @@ export function useCachedApi<T>(
       return;
     }
 
-    console.log(`[useCachedApi] Checking cache for key: ${cacheKey}`);
+    logger.log(`[useCachedApi] Checking cache for key: ${cacheKey}`);
 
     // Intentar cargar desde caché primero
     const cachedData = cacheService.get<T>(cacheKey);
 
     if (cachedData) {
-      console.log(`[useCachedApi] Found cached data for key: ${cacheKey}`);
+      logger.log(`[useCachedApi] Found cached data for key: ${cacheKey}`);
       // Hay datos válidos en caché, usarlos inmediatamente
       setState({
         data: cachedData,
@@ -149,7 +150,7 @@ export function useCachedApi<T>(
         onSuccess(cachedData);
       }
     } else {
-      console.log(`[useCachedApi] No cached data, making API call for key: ${cacheKey}`);
+      logger.log(`[useCachedApi] No cached data, making API call for key: ${cacheKey}`);
       // No hay caché válido, hacer llamada API
       execute();
     }
