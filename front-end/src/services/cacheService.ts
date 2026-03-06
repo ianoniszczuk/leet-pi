@@ -15,22 +15,22 @@ class CacheService {
     try {
       const cacheKey = this.getCacheKey(key);
       const cached = localStorage.getItem(cacheKey);
-      
+
       if (!cached) {
-        console.log(`[CacheService] No cached data found for key: ${key}`);
+        //console.log(`[CacheService] No cached data found for key: ${key}`);
         return null;
       }
 
       const entry: CacheEntry<T> = JSON.parse(cached);
-      
+
       // Verificar si ha expirado
       if (this.isEntryExpired(entry)) {
-        console.log(`[CacheService] Cache expired for key: ${key}`);
+        //console.log(`[CacheService] Cache expired for key: ${key}`);
         this.invalidate(key);
         return null;
       }
 
-      console.log(`[CacheService] Found valid cached data for key: ${key}`);
+      //console.log(`[CacheService] Found valid cached data for key: ${key}`);
       return entry.data;
     } catch (error) {
       console.warn('Error reading from cache:', error);
@@ -53,7 +53,7 @@ class CacheService {
       };
 
       localStorage.setItem(cacheKey, JSON.stringify(entry));
-      console.log(`[CacheService] Saved to cache: ${key}, expires in ${ttl}ms`);
+      //console.log(`[CacheService] Saved to cache: ${key}, expires in ${ttl}ms`);
     } catch (error) {
       console.warn('Error writing to cache:', error);
     }
@@ -106,7 +106,7 @@ class CacheService {
     try {
       const cacheKey = this.getCacheKey(key);
       const cached = localStorage.getItem(cacheKey);
-      
+
       if (!cached) {
         return true;
       }
@@ -151,7 +151,7 @@ class CacheService {
    */
   getCacheInfo(): { key: string; size: number; expiresAt: number }[] {
     const info: { key: string; size: number; expiresAt: number }[] = [];
-    
+
     try {
       const keys = Object.keys(localStorage);
       keys.forEach(key => {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, Eye, Calendar, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { FileText, Eye, Calendar, CheckCircle, XCircle } from 'lucide-react';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useCachedMySubmissions } from '@/hooks/useCachedApi';
 import type { Submission } from '@/types';
@@ -159,7 +159,7 @@ export default function MySubmissions() {
               </div>
 
               <div className="divide-y divide-gray-200">
-                {submissions.map((submission, index) => (
+                {submissions.map((submission) => (
                   <div
                     key={`${submission.userId}-${submission.guideNumber}-${submission.exerciseNumber}-${submission.createdAt}`}
                     className="p-6 hover:bg-gray-50 transition-colors duration-200"

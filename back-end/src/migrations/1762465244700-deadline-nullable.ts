@@ -1,7 +1,7 @@
 import type { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class DeadlineNullable1740441600000 implements MigrationInterface {
-  name = 'DeadlineNullable1740441600000';
+export class DeadlineNullable1762465244700 implements MigrationInterface {
+  name = 'DeadlineNullable1762465244700';
 
   async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`ALTER TABLE "guides" ALTER COLUMN "deadline" DROP NOT NULL`);

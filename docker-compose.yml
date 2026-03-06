@@ -1,9 +1,11 @@
 networks:
   leet-pi-net:
 
+
 volumes:
   pgdata:
   backend_node_modules:
+
 
 services:
   code-judge:
@@ -13,13 +15,13 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - ./juez-codigo:/app    # hot-reload del código Python
+      - ./juez-codigo:/app # hot-reload del código Python
     restart: unless-stopped
     networks:
       - leet-pi-net
     healthcheck:
       # python:3.10-slim no incluye curl/wget; usamos python directamente
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/health')\""]
+      test: [ "CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/health')\"" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -42,7 +44,7 @@ services:
     networks:
       - leet-pi-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-leetpi_db}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-leetpi_db}" ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -55,20 +57,48 @@ services:
     environment:
       # Sobrescribe para apuntar a los servicios internos de Docker
       DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-leetpi_db}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
       CODE_JUDGE_URL: http://code-judge:5000
       OPENAPI_PATH: /docs/openapi.yaml
     ports:
-      - "${PORT:-3001}:3001"
+      - "${PORT:-8081}:3001"
     depends_on:
       db:
         condition: service_healthy
       code-judge:
         condition: service_healthy
     volumes:
-      - ./back-end/src:/app/src                        # hot-reload del código TS
+      - ./back-end/src:/app/src # hot-reload del código TS
       - ./docs:/docs:ro
-      - ./back-end/scripts/data:/app/scripts/data:ro
-      - backend_node_modules:/app/node_modules         # preserva node_modules de la imagen
+      - ./back-end/scripts:/app/scripts:ro
+      - backend_node_modules:/app/node_modules # preserva node_modules de la imagen
     restart: unless-stopped
     networks:
       - leet-pi-net
+
+  front-end:
+    build:
+      context: ./front-end
+      target: prod
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3001/api}
+        VITE_AUTH0_DOMAIN: ${VITE_AUTH0_DOMAIN}
+        VITE_AUTH0_CLIENT_ID: ${VITE_AUTH0_CLIENT_ID}
+        VITE_AUTH0_AUDIENCE: ${VITE_AUTH0_AUDIENCE}
+        VITE_AUTH0_REDIRECT_URI: ${VITE_AUTH0_REDIRECT_URI:-http://localhost:8080/callback}
+        VITE_APP_NAME: ${VITE_APP_NAME:-Leet PI}
+        VITE_APP_VERSION: ${VITE_APP_VERSION:-1.0.0}
+    ports:
+      - "8080:80"
+    depends_on:
+      - back-end
+    restart: unless-stopped
+    networks:
+      - leet-pi-net
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost/health || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3

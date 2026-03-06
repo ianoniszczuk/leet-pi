@@ -6,7 +6,8 @@ import { InitialSchema1757623551991 } from '../migrations/1757623551991-initial-
 import { UserRolesDeadlineEnabledSession1762463659656 } from '../migrations/1762463659656-user-roles-deadline-enabled-session.ts';
 import { ChangeEnabledDefaultToFalse1762464439246 } from '../migrations/1762464439246-change-enabled-default-to-false.ts';
 import { MakeSubNullable1762464552974 } from '../migrations/1762464552974-make-sub-nullable.ts';
-import { DeadlineNullable1740441600000 } from '../migrations/1740441600000-deadline-nullable.ts';
+import { ForeignKeyUserRoles1762465244695 } from '../migrations/1762465244695-foreign-key-user-roles.ts';
+import { DeadlineNullable1762465244700 } from '../migrations/1762465244700-deadline-nullable.ts';
 import { AddFunctionSignatureToExercise1772245234876 } from '../migrations/1772245234876-add-function-signature-to-exercise.ts';
 import { AddHasTestFileToExercise1772245234877 } from '../migrations/1772245234877-add-has-test-file-to-exercise.ts';
 import { UserFullName1772553600000 } from '../migrations/1772553600000-user-full-name.ts';
@@ -30,7 +31,8 @@ const dataSourceOptions: DataSourceOptions = {
     UserRolesDeadlineEnabledSession1762463659656,
     ChangeEnabledDefaultToFalse1762464439246,
     MakeSubNullable1762464552974,
-    DeadlineNullable1740441600000,
+    ForeignKeyUserRoles1762465244695,
+    DeadlineNullable1762465244700,
     AddFunctionSignatureToExercise1772245234876,
     AddHasTestFileToExercise1772245234877,
     UserFullName1772553600000,
