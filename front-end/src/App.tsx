@@ -1,14 +1,14 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { useAuth } from '@/hooks/useAuth'
-import Header from '@/components/layout/Header'
-import Landing from '@/pages/Landing'
-import Callback from '@/pages/Callback'
-import SubmitCode from '@/pages/SubmitCode'
-import MySubmissions from '@/pages/MySubmissions'
-import UserProfile from '@/pages/UserProfile'
-import Admin from '@/pages/Admin'
-import AdminRoute from '@/components/auth/AdminRoute'
-import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import { useAuth } from '@/auth/hooks/useAuth'
+import Header from '@/shared/components/Header'
+import Landing from '@/auth/pages/Landing'
+import Callback from '@/auth/pages/Callback'
+import SubmitCode from '@/code/pages/SubmitCode'
+import MySubmissions from '@/submissions/pages/MySubmissions'
+import UserProfile from '@/profile/pages/UserProfile'
+import Admin from '@/admin/pages/Admin'
+import AdminRoute from '@/auth/components/AdminRoute'
+import LoadingSpinner from '@/shared/components/LoadingSpinner'
 
 function App() {
   const { isLoading, isAuthenticated } = useAuth()
@@ -35,7 +35,7 @@ function App() {
           </>
         } />
         <Route path="/callback" element={<Callback />} />
-        
+
         {/* Protected routes with header */}
         <Route path="/submit" element={
           <>
@@ -55,7 +55,7 @@ function App() {
             <UserProfile />
           </>
         } />
-        
+
         {/* Admin routes */}
         <Route path="/admin" element={
           <>
@@ -65,7 +65,7 @@ function App() {
             </AdminRoute>
           </>
         } />
-        
+
         {/* Redirect authenticated users from landing to submit */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -32,6 +32,44 @@ VITE_API_BASE_URL=http://localhost:3000/api
 - Axios for API communication, React Router v6
 - Monaco Editor for C code editing
 
+### Feature-Based Directory Structure
+
+The codebase is organized by feature domain under `src/`:
+
+```
+src/
+├── App.tsx / main.tsx / index.css        # Root files
+├── admin/                                # Admin panel feature
+│   ├── components/                       # Admin tabs, modals, dashboard charts
+│   ├── hooks/                            # useAdmin, useAcademicMetrics
+│   ├── pages/                            # Admin page
+│   └── types/                            # Admin-specific types (AdminUser, metrics, etc.)
+├── auth/                                 # Authentication feature
+│   ├── components/                       # AdminRoute, AuthButton, ProtectedRoute
+│   ├── config/                           # Auth0 provider config
+│   ├── hooks/                            # useAuth
+│   ├── pages/                            # Login callback, Landing page
+│   └── types/                            # Auth0User, ProtectedRouteProps
+├── profile/                              # User profile feature
+│   ├── components/                       # EditProfileModal
+│   ├── pages/                            # UserProfile page
+│   └── types/                            # UserProfile (extends User)
+├── submissions/                          # Submission history feature
+│   ├── pages/                            # MySubmissions page
+│   └── types/                            # Submission type
+├── code/                                 # Code editor & evaluation feature
+│   ├── components/                       # ResultsPanel, ExerciseRankings
+│   ├── pages/                            # SubmitCode page
+│   └── types/                            # SubmissionResponse, TestResult, ranking types
+└── shared/                               # Cross-feature shared code
+    ├── components/                       # Header, LoadingSpinner, SessionExpiredModal
+    ├── config/                           # API config, cache config
+    ├── hooks/                            # useApi, useCachedApi
+    ├── services/                         # ApiService (singleton), CacheService
+    ├── types/                            # ApiResponse, User, Exercise, Guide, etc.
+    └── utils/                            # Logger
+```
+
 ### Application Flow
 
 `main.tsx` wraps the app in `BrowserRouter` → `Auth0ProviderWrapper` → `App`. The `App` component handles routing with `Header` shown on all pages except the unauthenticated landing.
@@ -46,16 +84,16 @@ The app uses a **dual-token system** on top of Auth0:
 
 ### Data Layer
 
-All API calls go through the singleton `apiService` (`src/services/api.ts`). API endpoints are defined in `src/config/api.ts`.
+All API calls go through the singleton `apiService` (`src/shared/services/api.ts`). API endpoints are defined in `src/shared/config/api.ts`.
 
-For read-heavy data, use the cached hooks (`src/hooks/useCachedApi.ts`) which implement a cache-first strategy backed by `cacheService` with TTL-based invalidation:
+For read-heavy data, use the cached hooks (`src/shared/hooks/useCachedApi.ts`) which implement a cache-first strategy backed by `cacheService` with TTL-based invalidation:
 - Available exercises: 30 min TTL
 - User profile: 10 min TTL
 - My submissions: 2 min TTL
 
 Cache is invalidated automatically after successful code submissions.
 
-Use `useApi` (`src/hooks/useApi.ts`) for non-cached, simpler API interactions.
+Use `useApi` (`src/shared/hooks/useApi.ts`) for non-cached, simpler API interactions.
 
 ### Path Alias
 
@@ -76,8 +114,12 @@ Custom color scales defined in `tailwind.config.js`: `primary` (blue), `success`
 | `/profile` | `UserProfile` | Yes |
 | `/admin` | `Admin` | Yes + `AdminRoute` guard |
 
-### Key Types (`src/types/index.ts`)
+### Key Types
 
-- `SubmissionResponse` — result from code evaluation: `overallStatus`, `score`, `testResults[]`
-- `GuideWithExercises` — structure for selecting guide/exercise in submission form
-- `ApiResponse<T>` — standard backend envelope `{ success, data?, error? }`
+Types are split across feature modules:
+- **`shared/types`**: `ApiResponse<T>`, `User`, `Exercise`, `Guide`, `GuideWithExercises`
+- **`admin/types`**: `AdminUser`, `AdminGuide`, metrics types (StudentProgressMetric, etc.)
+- **`auth/types`**: `Auth0User`, `ProtectedRouteProps`, `AuthButtonProps`
+- **`profile/types`**: `UserProfile` (extends `User`)
+- **`submissions/types`**: `Submission`
+- **`code/types`**: `SubmissionResponse`, `TestResult`, `SubmissionForm`, ranking types

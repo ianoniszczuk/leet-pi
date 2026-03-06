@@ -1,7 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
-import { Auth0ProviderWrapper } from '@/config/auth0'
+import { Auth0ProviderWrapper } from '@/auth/config/auth0'
 import App from './App.tsx'
 import './index.css'
 
