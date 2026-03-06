@@ -21,6 +21,15 @@ function parseAssertError(error: string): { expression: string; message: string 
     return { expression: raw, message: null };
 }
 
+/**
+ * Strip internal server paths from compilation errors to avoid leaking
+ * sensitive details (e.g. /tmp/submissions/UUID.c → main.c).
+ */
+function sanitizeCompilationError(error: string): string {
+    // Replace /tmp/submissions/<uuid>.c or any absolute .c path with main.c
+    return error.replace(/\/[^\s:]+\.c/g, 'main.c');
+}
+
 interface ResultsPanelProps {
     result: SubmissionResponse | null;
     error: string | null;
@@ -149,34 +158,36 @@ export default function ResultsPanel({ result, error, loading }: ResultsPanelPro
                     </div>
                 </div>
 
-                {/* Score and Performance */}
-                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {/* Time */}
-                    <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl p-5 border border-purple-200 flex flex-col overflow-hidden">
-                        <div className="flex flex-col items-center gap-2 mb-4">
-                            <div className="w-14 h-14 bg-purple-100 rounded-full flex items-center justify-center">
-                                <Clock className="w-7 h-7 text-purple-600" />
+                {/* Score and Performance — only shown when approved */}
+                {result.overallStatus === 'approved' && (
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {/* Time */}
+                        <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl p-5 border border-purple-200 flex flex-col overflow-hidden">
+                            <div className="flex flex-col items-center gap-2 mb-4">
+                                <div className="w-14 h-14 bg-purple-100 rounded-full flex items-center justify-center">
+                                    <Clock className="w-7 h-7 text-purple-600" />
+                                </div>
+                                <h4 className="font-bold text-gray-900 text-xl whitespace-nowrap">Tiempo</h4>
                             </div>
-                            <h4 className="font-bold text-gray-900 text-xl whitespace-nowrap">Tiempo</h4>
+                            <div className="flex-1 flex items-center justify-center text-center">
+                                <span className="text-3xl font-bold text-purple-600">{result.executionTime}</span>
+                            </div>
                         </div>
-                        <div className="flex-1 flex items-center justify-center text-center">
-                            <span className="text-3xl font-bold text-purple-600">{result.executionTime}</span>
-                        </div>
-                    </div>
 
-                    {/* Memory */}
-                    <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-5 border border-orange-200 flex flex-col overflow-hidden">
-                        <div className="flex flex-col items-center gap-2 mb-4">
-                            <div className="w-14 h-14 bg-orange-100 rounded-full flex items-center justify-center">
-                                <HardDrive className="w-7 h-7 text-orange-600" />
+                        {/* Memory */}
+                        <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-5 border border-orange-200 flex flex-col overflow-hidden">
+                            <div className="flex flex-col items-center gap-2 mb-4">
+                                <div className="w-14 h-14 bg-orange-100 rounded-full flex items-center justify-center">
+                                    <HardDrive className="w-7 h-7 text-orange-600" />
+                                </div>
+                                <h4 className="font-bold text-gray-900 text-xl whitespace-nowrap">Memoria</h4>
                             </div>
-                            <h4 className="font-bold text-gray-900 text-xl whitespace-nowrap">Memoria</h4>
-                        </div>
-                        <div className="flex-1 flex items-center justify-center text-center">
-                            <span className="text-3xl font-bold text-orange-600">{result.memoryUsage}</span>
+                            <div className="flex-1 flex items-center justify-center text-center">
+                                <span className="text-3xl font-bold text-orange-600">{result.memoryUsage}</span>
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
 
                 {/* Compilation Error */}
                 {result.compilationError && (
@@ -192,7 +203,7 @@ export default function ResultsPanel({ result, error, loading }: ResultsPanelPro
                         </div>
                         <div className="bg-red-100 border border-red-200 rounded-lg p-4">
                             <pre className="text-sm text-red-700 whitespace-pre-wrap font-mono">
-                                {result.compilationError}
+                                {sanitizeCompilationError(result.compilationError)}
                             </pre>
                         </div>
                     </div>
