@@ -16,6 +16,7 @@ services:
       - "5000:5000"
     volumes:
       - ./juez-codigo:/app # hot-reload del código Python
+      - ${CODE_JUDGE_TESTS_PATH}:/tests
     restart: unless-stopped
     networks:
       - leet-pi-net
@@ -75,7 +76,7 @@ services:
       - ./docs:/docs:ro
       - ./back-end/scripts:/app/scripts:ro
       - backend_node_modules:/app/node_modules # preserva node_modules de la imagen
-      - /home/SHARED/logs:/app/logs
+      - ${BACKEND_LOGS_PATH}:/app/logs
     restart: unless-stopped
     networks:
       - leet-pi-net
