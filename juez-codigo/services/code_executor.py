@@ -29,7 +29,14 @@ _SUBMISSIONS_SEARCH_PATHS = [
     ) if path
 ]
 _TMP_SUBMISSIONS_PATH = "/tmp/submissions"
+_NSJAIL_ENABLED = os.environ.get("NSJAIL_ENABLED", "false").lower() == "true"
+_NSJAIL_BIN = "/usr/local/bin/nsjail"
 logger = logging.getLogger(__name__)
+
+if _NSJAIL_ENABLED:
+    logger.info("nsjail sandbox is ENABLED")
+else:
+    logger.info("nsjail sandbox is DISABLED (legacy mode)")
 
 def execute_evaluation(request: EvaluationRequest) -> EvaluationResponse:
     """Execute code evaluation with test cases"""
@@ -115,6 +122,11 @@ def _compile_code(source_file: str, exe_file: str, test_file: str) -> Compilatio
         exe_file
     ]
 
+    # When nsjail is enabled, compile with -static so the binary can run
+    # inside a minimal chroot without needing shared libraries mounted.
+    if _NSJAIL_ENABLED:
+        compile_command.insert(3, '-static')
+
     try:
         compile_result = subprocess.run(
             compile_command,
@@ -141,7 +153,9 @@ def _execute_test_cases(exe_file: str, request: EvaluationRequest) -> tuple[Exec
     failed_tests = 0
     peak_memory_kb = 0
 
-    test_result, memory_kb = _execute_single_test(exe_file, request.timeout)
+    test_result, memory_kb = _execute_single_test(
+        exe_file, request.timeout, request.memoryLimit
+    )
     test_results.append(test_result)
     peak_memory_kb = max(peak_memory_kb, memory_kb)
 
@@ -157,13 +171,109 @@ def _execute_test_cases(exe_file: str, request: EvaluationRequest) -> tuple[Exec
         testResults=test_results
     ), peak_memory_kb, test_result.executionTime
 
-def _execute_single_test(exe_file: str, timeout_ms: int) -> tuple[TestResult, int]:
+
+# ─── nsjail helpers ───────────────────────────────────────────────
+
+def _build_nsjail_command(exe_file: str, timeout_s: float, memory_limit_mb: int) -> list[str]:
+    """Build the nsjail command to sandbox the execution of *exe_file*.
+
+    The binary is expected to be statically compiled so it can run inside
+    a minimal chroot with no shared‑library mounts.
+    """
+    memory_limit_bytes = memory_limit_mb * 1024 * 1024
+    time_limit = max(1, int(timeout_s))
+
+    return [
+        _NSJAIL_BIN,
+        "--mode", "o",              # ONCE – run the command once and exit
+        "--user", "65534",          # nobody
+        "--group", "65534",         # nogroup
+        "--time_limit", str(time_limit),
+        "--rlimit_as", str(memory_limit_mb),   # virtual memory cap (MB)
+        "--rlimit_nproc", "1",      # no fork bombs
+        "--rlimit_fsize", "1",      # 1 MB max file writes
+        "--rlimit_nofile", "32",    # limit open file descriptors
+        "--cgroup_mem_max", str(memory_limit_bytes),
+        "--disable_proc",           # no /proc inside the jail
+        "--really_quiet",           # suppress nsjail info on stderr
+        # Minimal filesystem: only the executable itself
+        "-R", f"{exe_file}:/exe",
+        "-T", "/tmp",              # empty tmpfs
+        "--",
+        "/exe",
+    ]
+
+
+# ─── execution (sandbox or legacy) ───────────────────────────────
+
+def _execute_single_test(exe_file: str, timeout_ms: int, memory_limit_mb: int = 256) -> tuple[TestResult, int]:
     """Execute the compiled program once.
+
+    If NSJAIL_ENABLED, the binary runs inside a jail with strict resource
+    limits enforced by the kernel.  Otherwise falls back to the legacy
+    direct‑execution path.
+
+    Returns (TestResult, peak_memory_kb).
+    """
+    timeout_s = timeout_ms / 1000.0
+
+    if _NSJAIL_ENABLED:
+        return _execute_single_test_jailed(exe_file, timeout_s, memory_limit_mb)
+    else:
+        return _execute_single_test_legacy(exe_file, timeout_s)
+
+
+def _execute_single_test_jailed(exe_file: str, timeout_s: float, memory_limit_mb: int) -> tuple[TestResult, int]:
+    """Run the binary inside nsjail. nsjail enforces time, memory, and
+    process limits via namespaces + cgroups.  We still apply a generous
+    Python‑level timeout as a final safety net."""
+    cmd = _build_nsjail_command(exe_file, timeout_s, memory_limit_mb)
+    safety_timeout = timeout_s + 5  # extra headroom for nsjail overhead
+
+    start = time.monotonic()
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=safety_timeout,
+        )
+    except subprocess.TimeoutExpired:
+        elapsed = time.monotonic() - start
+        return TestResult(
+            testNumber=1,
+            passed=False,
+            executionTime=_format_time(elapsed),
+            error="Timeout"
+        ), 0
+
+    elapsed = time.monotonic() - start
+    stdout = (result.stdout or "").strip()
+    stderr = (result.stderr or "").strip()
+
+    if result.returncode == 0:
+        return TestResult(
+            testNumber=1,
+            passed=True,
+            executionTime=_format_time(elapsed),
+            error=None
+        ), 0
+
+    error_details = _build_error_message(result.returncode, stdout, stderr)
+    return TestResult(
+        testNumber=1,
+        passed=False,
+        executionTime=_format_time(elapsed),
+        error=error_details
+    ), 0
+
+
+def _execute_single_test_legacy(exe_file: str, timeout_s: float) -> tuple[TestResult, int]:
+    """Legacy direct execution (no sandbox).
     - Time:   rusage.ru_utime (pure user-space CPU time, no fork/exec/OS overhead).
     - Memory: peak VmRSS read from /proc/<pid>/status while the process runs
               (reflects only the exec'd binary + its libraries, not the Python parent).
     Returns (TestResult, peak_memory_kb)."""
-    timeout_s = timeout_ms / 1000.0
 
     proc = subprocess.Popen(
         [exe_file],
@@ -174,7 +284,6 @@ def _execute_single_test(exe_file: str, timeout_ms: int) -> tuple[TestResult, in
     stderr_fd = proc.stderr.fileno()
 
     # Monitor VmRSS from /proc while the process runs.
-    # This reads the actual RSS of the exec'd binary, not the Python parent's RSS.
     peak_rss_kb = [0]
     stop_event = threading.Event()
 
@@ -257,6 +366,9 @@ def _execute_single_test(exe_file: str, timeout_ms: int) -> tuple[TestResult, in
         executionTime=_format_time(cpu_time_s),
         error=error_details
     ), peak_memory_kb
+
+
+# ─── utilities ────────────────────────────────────────────────────
 
 def _format_memory(kb: int) -> str:
     """Convert a peak VmRSS value in KB to a human-readable string."""
