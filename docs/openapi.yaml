@@ -328,6 +328,33 @@ paths:
                   version: '1.0.0'
 
   # ═══════════════════════════════════════════
+  # SETTINGS (public)
+  # ═══════════════════════════════════════════
+  /settings:
+    get:
+      tags: [Settings]
+      summary: Obtener configuración pública
+      description: Retorna configuraciones públicas de la app (sin autenticación).
+      operationId: getPublicSettings
+      responses:
+        '200':
+          description: Configuración pública
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          githubIssuesUrl:
+                            type: string
+                            nullable: true
+                            example: 'https://github.com/org/repo/issues'
+
+  # ═══════════════════════════════════════════
   # AUTH
   # ═══════════════════════════════════════════
   /auth/login:
@@ -1228,6 +1255,91 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalError'
+
+  /admin/settings:
+    get:
+      tags: [Admin]
+      summary: Listar todas las configuraciones
+      description: Retorna todas las entradas de `app_settings`. Requiere rol admin.
+      operationId: getAllSettings
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Lista de configuraciones
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            key:
+                              type: string
+                            value:
+                              type: string
+                              nullable: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/settings/{key}:
+    patch:
+      tags: [Admin]
+      summary: Actualizar un setting
+      description: Actualiza el valor de la clave indicada en `app_settings`. Requiere rol admin.
+      operationId: updateSetting
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Clave del setting (ej. `github_issues_url`)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                value:
+                  type: string
+                  nullable: true
+              example:
+                value: 'https://github.com/org/repo/issues'
+      responses:
+        '200':
+          description: Setting actualizado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          key:
+                            type: string
+                          value:
+                            type: string
+                            nullable: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /admin/guides/{guideNumber}:
     patch:

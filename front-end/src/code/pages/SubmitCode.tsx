@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import Editor, { type OnMount } from '@monaco-editor/react';
-import { Code2, AlertCircle, Play } from 'lucide-react';
+import { Code2, AlertCircle, Play, Github } from 'lucide-react';
 import ProtectedRoute from '@/auth/components/ProtectedRoute';
 import SessionExpiredModal from '@/shared/components/SessionExpiredModal';
 import ExerciseRankings from '@/code/components/ExerciseRankings';
 import ResultsPanel from '@/code/components/ResultsPanel';
 import { useSubmission } from '@/shared/hooks/useApi';
 import { useCachedAvailableExercises } from '@/shared/hooks/useCachedApi';
+import { apiService } from '@/shared/services/api';
 import logger from '@/shared/utils/logger';
 import type { SubmissionResponse } from '@/code/types';
 
@@ -39,6 +40,7 @@ export default function SubmitCode() {
   const [showResults, setShowResults] = useState(false);
   const [showSessionExpiredModal, setShowSessionExpiredModal] = useState(false);
   const [rankingsRefreshKey, setRankingsRefreshKey] = useState(0);
+  const [githubIssuesUrl, setGithubIssuesUrl] = useState<string | null>(null);
   const handleSubmitRef = useRef<() => void>(() => { });
   // Prevents the save effect from writing DEFAULT_CODE to localStorage before
   // the exercises effect has had a chance to set the correct initial code
@@ -46,6 +48,13 @@ export default function SubmitCode() {
   const codeInitializedRef = useRef(false);
   const { submitSolution, loading, error } = useSubmission();
   const { data: availableExercises, loading: exercisesLoading, error: exercisesError } = useCachedAvailableExercises();
+
+  // Fetch public settings (GitHub Issues URL)
+  useEffect(() => {
+    apiService.getPublicSettings().then(res => {
+      if (res.success && res.data) setGithubIssuesUrl(res.data.githubIssuesUrl);
+    }).catch(() => { /* silently ignore */ });
+  }, []);
 
   // Save code to localStorage keyed by exercise whenever it changes.
   // Blocked until exercises have loaded and set the real initial code.
@@ -269,6 +278,17 @@ export default function SubmitCode() {
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
+                    {githubIssuesUrl && (
+                      <a
+                        href={githubIssuesUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors shadow-lg"
+                      >
+                        <Github className="w-4 h-4" />
+                        <span className="hidden sm:inline">Consultas</span>
+                      </a>
+                    )}
                     <div className="relative group/submit flex items-center">
                       <span className="absolute top-full mt-2 left-1/2 -translate-x-1/2 text-xs text-gray-500 bg-gray-200 px-3 py-1 rounded-full whitespace-nowrap opacity-0 group-hover/submit:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
                         Ctrl+Enter
@@ -320,7 +340,7 @@ export default function SubmitCode() {
                       options={{
                         fontSize: 14,
                         fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace",
-                        fontLigatures: true,
+                        fontLigatures: false,
                         minimap: { enabled: false },
                         scrollBeyondLastLine: false,
                         wordWrap: 'on',

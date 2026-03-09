@@ -3,7 +3,7 @@ import { API_CONFIG, API_ENDPOINTS } from '@/shared/config/api';
 import { cacheService } from './cacheService';
 import { CACHE_KEYS, CACHE_CONFIG } from '@/shared/config/cache';
 import logger from '@/shared/utils/logger';
-import type { ApiResponse, User, GuideWithExercises } from '@/shared/types';
+import type { ApiResponse, User, GuideWithExercises, AppSettings, AppSetting } from '@/shared/types';
 import type { UserProfile } from '@/profile/types';
 import type { Submission } from '@/submissions/types';
 import type { SubmissionResponse, SubmissionForm, ExerciseRankingsData } from '@/code/types';
@@ -351,6 +351,22 @@ class ApiService {
       CACHE_KEYS.metricsCompletionMatrix,
       API_ENDPOINTS.admin.metrics.completionMatrix,
     );
+  }
+
+  // Settings endpoints
+  async getPublicSettings(): Promise<ApiResponse<AppSettings>> {
+    const response = await this.api.get(API_ENDPOINTS.settings.public);
+    return response.data;
+  }
+
+  async getAllSettings(): Promise<ApiResponse<AppSetting[]>> {
+    const response = await this.api.get(API_ENDPOINTS.settings.adminAll);
+    return response.data;
+  }
+
+  async updateSetting(key: string, value: string | null): Promise<ApiResponse<AppSetting>> {
+    const response = await this.api.patch(API_ENDPOINTS.settings.adminUpdate(key), { value });
+    return response.data;
   }
 
   // Utility method to set auth tokens
