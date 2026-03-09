@@ -50,6 +50,25 @@ services:
       timeout: 5s
       retries: 10
 
+  db-backup:
+    build:
+      context: ./db-backup
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${DB_NAME:-leetpi_db}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      SCHEDULE: "0 6 * * *"
+    volumes:
+      - ${DB_BACKUPS_PATH}:/backups
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - leet-pi-net
+
   back-end:
     build:
       context: ./back-end
@@ -77,6 +96,7 @@ services:
       - ./back-end/scripts:/app/scripts:ro
       - backend_node_modules:/app/node_modules # preserva node_modules de la imagen
       - ${BACKEND_LOGS_PATH}:/app/logs
+      - ${DB_BACKUPS_PATH}:/backups
     restart: unless-stopped
     networks:
       - leet-pi-net
