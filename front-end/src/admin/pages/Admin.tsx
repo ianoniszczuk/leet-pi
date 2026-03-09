@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Users, BookOpen, BarChart2 } from 'lucide-react';
+import { Users, BookOpen, BarChart2, Settings } from 'lucide-react';
 import { useAdmin } from '@/admin/hooks/useAdmin';
 import GuidesTab from '@/admin/components/GuidesTab';
 import UsersTab from '@/admin/components/UsersTab';
 import ActivityTab from '@/admin/components/ActivityTab';
+import SettingsTab from '@/admin/components/SettingsTab';
 
-type Tab = 'users' | 'guides' | 'activity';
+type Tab = 'users' | 'guides' | 'activity' | 'settings';
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState<Tab>('users');
@@ -54,12 +55,23 @@ export default function Admin() {
             <BarChart2 className="w-4 h-4" />
             Actividad
           </button>
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${activeTab === 'settings'
+              ? 'bg-white border border-b-white border-gray-200 text-primary-700 -mb-px'
+              : 'text-gray-500 hover:text-gray-700'
+              }`}
+          >
+            <Settings className="w-4 h-4" />
+            Configuración
+          </button>
         </div>
 
         {/* Tab content */}
         {activeTab === 'guides' && <GuidesTab />}
         {activeTab === 'users' && <UsersTab currentUserRoles={currentUserRoles} />}
         {activeTab === 'activity' && <ActivityTab />}
+        {activeTab === 'settings' && <SettingsTab />}
       </div>
     </div>
   );

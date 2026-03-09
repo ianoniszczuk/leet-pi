@@ -11,6 +11,7 @@ import { DeadlineNullable1762465244700 } from '../migrations/1762465244700-deadl
 import { AddFunctionSignatureToExercise1772245234876 } from '../migrations/1772245234876-add-function-signature-to-exercise.ts';
 import { AddHasTestFileToExercise1772245234877 } from '../migrations/1772245234877-add-has-test-file-to-exercise.ts';
 import { UserFullName1772553600000 } from '../migrations/1772553600000-user-full-name.ts';
+import { AppSettings1772553600001 } from '../migrations/1772553600001-app-settings.ts';
 
 dotenv.config();
 
@@ -36,6 +37,7 @@ const dataSourceOptions: DataSourceOptions = {
     AddFunctionSignatureToExercise1772245234876,
     AddHasTestFileToExercise1772245234877,
     UserFullName1772553600000,
+    AppSettings1772553600001,
   ],
 }
 

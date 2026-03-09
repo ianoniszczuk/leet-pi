@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Code2, CheckCircle, Users, Zap, Github } from 'lucide-react';
+import { Code2, CheckCircle, Users, Zap, LogIn } from 'lucide-react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import AuthButton from '@/auth/components/AuthButton';
 
@@ -39,6 +39,18 @@ export default function Landing() {
       </div>
     );
   }
+
+  const { login: ctaLogin } = useAuth();
+
+  const CtaLoginButton = () => (
+    <button
+      onClick={ctaLogin}
+      className="bg-white hover:bg-gray-50 text-primary-600 font-semibold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-200 flex items-center gap-3 mx-auto"
+    >
+      <LogIn className="w-5 h-5" />
+      Iniciar Sesión
+    </button>
+  );
 
   const features = [
     {
@@ -346,34 +358,25 @@ export default function Landing() {
             <p className="text-xl text-primary-100 mb-8 max-w-2xl mx-auto">
               Únete a la plataforma y comienza a mejorar tus habilidades de programación hoy mismo
             </p>
-            <AuthButton
-              className="bg-white hover:bg-gray-50 text-primary-600 font-semibold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-200 flex items-center gap-3 mx-auto"
-            />
+            <CtaLoginButton />
           </motion.div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-8 bg-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-primary-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                <Code2 className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-white font-semibold">Leet PI</span>
-            </div>
-
-            <div className="flex items-center gap-6 text-gray-400">
-              <a
-                href="#"
-                className="flex items-center gap-2 hover:text-white transition-colors"
-              >
-                <Github className="w-4 h-4" />
-                <span className="text-sm">Repositorio</span>
-              </a>
-              <span className="text-sm">v1.0.0</span>
-            </div>
+      <footer className="py-12 bg-gray-900">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <p className="text-xs uppercase tracking-widest text-gray-500 mb-6 font-semibold">
+            Créditos
+          </p>
+          <div className="flex flex-col gap-3">
+            <span className="text-base text-gray-300">Martín Alejandro Barnatán — mbarnatan@itba.edu.ar</span>
+            <span className="text-base text-gray-300">Manuel Cortés Teyssier — mcortesteyssier@itba.edu.ar</span>
+            <span className="text-base text-gray-300">Ian Cruz Oniszczuk — ioniszczuk@itba.edu.ar</span>
+            <span className="text-base text-gray-300">Adrián Etchevarne — aetcheva@itba.edu.ar</span>
+          </div>
+          <div className="mt-8 border-t border-gray-800 pt-6">
+            <p className="text-sm text-gray-500">72.31 Programación Imperativa - Instituto Tecnológico de Buenos Aires</p>
           </div>
         </div>
       </footer>

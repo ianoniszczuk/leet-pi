@@ -49,10 +49,17 @@ const adminEndpoints = {
   },
 };
 
+const settingsEndpoints = {
+  public: '/settings',
+  adminAll: '/admin/settings',
+  adminUpdate: (key: string) => `/admin/settings/${key}`,
+};
+
 export const API_ENDPOINTS = {
   health: '/health',
   auth: authEndpoints,
   users: userEndpoints,
   submissions: submissionEndpoints,
   admin: adminEndpoints,
+  settings: settingsEndpoints,
 } as const;

@@ -35,6 +35,16 @@ export interface Guide {
     exercises?: Exercise[];
 }
 
+// App Settings Types
+export interface AppSettings {
+    githubIssuesUrl: string | null;
+}
+
+export interface AppSetting {
+    key: string;
+    value: string | null;
+}
+
 // Available Exercises Types
 export interface AvailableExercise {
     exerciseNumber: number;

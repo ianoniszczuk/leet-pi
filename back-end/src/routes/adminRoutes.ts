@@ -1,6 +1,7 @@
 import express from 'express';
 import adminController from '../controllers/adminController.ts';
 import metricsController from '../controllers/metricsController.ts';
+import settingsController from '../controllers/settingsController.ts';
 import { requireAdmin, requireSuperAdmin } from '../middleware/adminAuth.ts';
 import multer from 'multer';
 
@@ -55,6 +56,11 @@ router.delete('/guides/:guideNumber/exercises/:exerciseNumber', requireAdmin, ac
 router.post('/guides/:guideNumber/exercises/:exerciseNumber/test-file', requireAdmin, uploadC.single('testFile'), ac.uploadTestFile.bind(ac));
 router.delete('/guides/:guideNumber/exercises/:exerciseNumber/test-file', requireAdmin, ac.deleteTestFile.bind(ac));
 router.get('/guides/:guideNumber/exercises/:exerciseNumber/test-file', requireAdmin, ac.downloadTestFile.bind(ac));
+
+// Settings routes
+const sc = settingsController;
+router.get('/settings', requireAdmin, sc.getAllSettings.bind(sc));
+router.patch('/settings/:key', requireAdmin, sc.updateSetting.bind(sc));
 
 // Metrics routes
 const mc = metricsController;
