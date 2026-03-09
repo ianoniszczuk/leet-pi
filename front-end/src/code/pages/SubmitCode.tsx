@@ -340,7 +340,7 @@ export default function SubmitCode() {
                       options={{
                         fontSize: 14,
                         fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace",
-                        fontLigatures: true,
+                        fontLigatures: false,
                         minimap: { enabled: false },
                         scrollBeyondLastLine: false,
                         wordWrap: 'on',
