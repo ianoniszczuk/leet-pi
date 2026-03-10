@@ -152,9 +152,9 @@ export class UserService {
   }
 
   /**
-   * Actualiza el fullName del usuario identificado por sub
+   * Actualiza el perfil del usuario identificado por sub
    */
-  async updateProfile(sub: string, data: { fullName: string }): Promise<User | null> {
+  async updateProfile(sub: string, data: { fullName?: string; receiveAlerts?: boolean }): Promise<User | null> {
     const user = await userDAO.findBySub(sub);
     if (!user) return null;
     return await userDAO.update(user.id, data);

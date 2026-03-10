@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vencimiento próximo</title>
+</head>
+<body style="margin:0;padding:0;background-color:#eff6ff;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#eff6ff;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#1e3a8a;border-radius:12px 12px 0 0;padding:32px 40px;text-align:center;">
+              <p style="margin:0;font-size:12px;color:#93c5fd;letter-spacing:2px;text-transform:uppercase;font-weight:600;">Programación Imperativa</p>
+              <h1 style="margin:8px 0 0;font-size:28px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;">Leet PI</h1>
+            </td>
+          </tr>
+
+          <!-- Alert banner -->
+          <tr>
+            <td style="background-color:#2563eb;padding:12px 40px;text-align:center;">
+              <p style="margin:0;font-size:13px;font-weight:600;color:#dbeafe;letter-spacing:0.5px;">
+                ⏰ &nbsp;Recordatorio de vencimiento
+              </p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="background-color:#ffffff;padding:40px 40px 32px;border-left:1px solid #bfdbfe;border-right:1px solid #bfdbfe;">
+
+              <p style="margin:0 0 8px;font-size:20px;font-weight:600;color:#1e3a8a;">
+                Hola{{greeting}},
+              </p>
+              <p style="margin:0 0 28px;font-size:15px;color:#374151;line-height:1.6;">
+                Te escribimos para recordarte que la <strong style="color:#1e3a8a;">Guía {{guideNumber}}</strong> vence el próximo <strong style="color:#2563eb;">{{deadlineStr}} a las 23:59</strong> y todavía tenés ejercicios pendientes.
+              </p>
+
+              <!-- Guide card -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;margin-bottom:28px;">
+                <tr>
+                  <td style="padding:20px 24px;">
+                    <p style="margin:0 0 14px;font-size:12px;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:1px;">
+                      Guía {{guideNumber}} — Ejercicios pendientes
+                    </p>
+                    {{exerciseRows}}
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.6;">
+                Todavía hay tiempo. Ingresá a la plataforma y completá los ejercicios antes del vencimiento.
+              </p>
+
+              <!-- CTA -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;">
+                <tr>
+                  <td style="background-color:#2563eb;border-radius:8px;text-align:center;">
+                    <a href="{{appUrl}}" style="display:block;padding:14px 28px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;">
+                      Ir a la plataforma →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#dbeafe;border:1px solid #bfdbfe;border-top:none;border-radius:0 0 12px 12px;padding:24px 40px;text-align:center;">
+              <p style="margin:0 0 4px;font-size:13px;color:#3b82f6;">Este es un mensaje automático.</p>
+              <p style="margin:0;font-size:13px;color:#3b82f6;">Si no querés recibir estos recordatorios, desactivá las alertas desde tu perfil.</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

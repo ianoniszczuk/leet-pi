@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { Users, BookOpen, BarChart2, Settings } from 'lucide-react';
+import { Users, BookOpen, BarChart2, Settings, FlaskConical } from 'lucide-react';
 import { useAdmin } from '@/admin/hooks/useAdmin';
 import GuidesTab from '@/admin/components/GuidesTab';
 import UsersTab from '@/admin/components/UsersTab';
 import ActivityTab from '@/admin/components/ActivityTab';
 import SettingsTab from '@/admin/components/SettingsTab';
+import TestsTab from '@/admin/components/TestsTab';
 
-type Tab = 'users' | 'guides' | 'activity' | 'settings';
+type Tab = 'users' | 'guides' | 'activity' | 'settings' | 'tests';
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState<Tab>('users');
@@ -65,6 +66,16 @@ export default function Admin() {
             <Settings className="w-4 h-4" />
             Configuración
           </button>
+          <button
+            onClick={() => setActiveTab('tests')}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${activeTab === 'tests'
+              ? 'bg-white border border-b-white border-gray-200 text-primary-700 -mb-px'
+              : 'text-gray-500 hover:text-gray-700'
+              }`}
+          >
+            <FlaskConical className="w-4 h-4" />
+            Pruebas
+          </button>
         </div>
 
         {/* Tab content */}
@@ -72,6 +83,7 @@ export default function Admin() {
         {activeTab === 'users' && <UsersTab currentUserRoles={currentUserRoles} />}
         {activeTab === 'activity' && <ActivityTab />}
         {activeTab === 'settings' && <SettingsTab />}
+        {activeTab === 'tests' && <TestsTab currentUserEmail={currentUser?.email ?? ''} />}
       </div>
     </div>
   );
