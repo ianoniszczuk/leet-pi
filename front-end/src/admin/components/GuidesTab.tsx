@@ -5,6 +5,7 @@ import {
 import { apiService } from '@/shared/services/api';
 import { cacheService } from '@/shared/services/cacheService';
 import { CACHE_KEYS } from '@/shared/config/cache';
+import ConfirmDeleteModal from '@/shared/components/ConfirmDeleteModal';
 import type { AdminGuide, AdminExercise } from '@/admin/types';
 
 // ─── Shared sub-components ────────────────────────────────────────────────────
@@ -32,35 +33,6 @@ function ModalFooter({ onCancel, loading, confirmLabel }: ModalFooterProps) {
 }
 
 // ─── Modals ───────────────────────────────────────────────────────────────────
-
-interface ConfirmDeleteModalProps {
-  message: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-  loading: boolean;
-}
-
-function ConfirmDeleteModal({ message, onConfirm, onCancel, loading }: ConfirmDeleteModalProps) {
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full mx-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Confirmar eliminación</h3>
-        <p className="text-sm text-gray-600 mb-6">{message}</p>
-        <div className="flex gap-3 justify-end">
-          <button onClick={onCancel} disabled={loading}
-            className="px-4 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
-            Cancelar
-          </button>
-          <button onClick={onConfirm} disabled={loading}
-            className="px-4 py-2 text-sm text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors flex items-center gap-2">
-            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-            Eliminar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 interface GuideFormData {
   guideNumber?: number;
@@ -245,8 +217,8 @@ function ExerciseModal({ guideNumber, onSave, onCancel, loading }: ExerciseModal
           <TestFileInput
             hasTestFile={false}
             onUpload={f => setPendingTestFile(f)}
-            onDelete={() => {}}
-            onDownload={() => {}}
+            onDelete={() => { }}
+            onDownload={() => { }}
             loading={loading}
           />
           {pendingTestFile && (
@@ -667,9 +639,13 @@ export default function GuidesTab() {
           loading={actionLoading}
         />
       )}
-      {deleteTarget && (
-        <ConfirmDeleteModal message={deleteMessage} onConfirm={handleConfirmDelete} onCancel={() => setDeleteTarget(null)} loading={actionLoading} />
-      )}
+      <ConfirmDeleteModal
+        isOpen={!!deleteTarget}
+        message={deleteMessage}
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeleteTarget(null)}
+        loading={actionLoading}
+      />
     </div>
   );
 }
