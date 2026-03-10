@@ -37,6 +37,12 @@ ps:
 ## Reinicia todos los servicios
 restart: down up
 
+## Elimina el volumen de node_modules del backend (fuerza reinstalación de dependencias)
+reset-backend-deps:
+	$(COMPOSE) down
+	docker volume rm leet-pi_backend_node_modules || true
+	$(COMPOSE) up -d --build
+
 ## Limpia contenedores, redes y volúmenes
 clean:
 	$(COMPOSE) down -v

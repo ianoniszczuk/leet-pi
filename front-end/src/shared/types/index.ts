@@ -16,6 +16,7 @@ export interface User {
     sub: string;
     email: string;
     fullName: string | null;
+    receiveAlerts: boolean;
     enabled?: boolean;
     roles?: string[];
     submissions?: any[];

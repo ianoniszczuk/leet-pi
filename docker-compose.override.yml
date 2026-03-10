@@ -1,0 +1,6 @@
+services:
+  back-end:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      MAILER_HOST: host.docker.internal

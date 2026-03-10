@@ -10,6 +10,7 @@ export class UserController {
       id: user.id,
       email: user.email,
       fullName: user.fullName,
+      receiveAlerts: user.receiveAlerts,
     };
   }
 
@@ -50,16 +51,28 @@ export class UserController {
         return;
       }
 
-      const { fullName } = req.body;
+      const { fullName, receiveAlerts } = req.body;
 
-      if (!fullName?.trim()) {
-        res.status(400).json(formatErrorResponse('fullName is required', 400));
+      if (fullName !== undefined && !fullName?.trim()) {
+        res.status(400).json(formatErrorResponse('fullName cannot be empty', 400));
         return;
       }
 
-      const updated = await userService.updateProfile(req.user.sub, {
-        fullName: fullName.trim(),
-      });
+      if (receiveAlerts !== undefined && typeof receiveAlerts !== 'boolean') {
+        res.status(400).json(formatErrorResponse('receiveAlerts must be a boolean', 400));
+        return;
+      }
+
+      if (fullName === undefined && receiveAlerts === undefined) {
+        res.status(400).json(formatErrorResponse('At least one of fullName or receiveAlerts must be provided', 400));
+        return;
+      }
+
+      const updateData: { fullName?: string; receiveAlerts?: boolean } = {};
+      if (fullName !== undefined) updateData.fullName = fullName.trim();
+      if (receiveAlerts !== undefined) updateData.receiveAlerts = receiveAlerts;
+
+      const updated = await userService.updateProfile(req.user.sub, updateData);
 
       if (!updated) {
         res.status(404).json(formatErrorResponse('User not found', 404));

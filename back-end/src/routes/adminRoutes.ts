@@ -57,6 +57,9 @@ router.post('/guides/:guideNumber/exercises/:exerciseNumber/test-file', requireA
 router.delete('/guides/:guideNumber/exercises/:exerciseNumber/test-file', requireAdmin, ac.deleteTestFile.bind(ac));
 router.get('/guides/:guideNumber/exercises/:exerciseNumber/test-file', requireAdmin, ac.downloadTestFile.bind(ac));
 
+// Test routes
+router.post('/test/send-deadline-alert', requireAdmin, ac.testSendDeadlineAlert.bind(ac));
+
 // Settings routes
 const sc = settingsController;
 router.get('/settings', requireAdmin, sc.getAllSettings.bind(sc));
