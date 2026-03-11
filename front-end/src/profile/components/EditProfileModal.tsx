@@ -7,6 +7,7 @@ interface EditProfileModalProps {
   onClose: () => void;
   onSaved: () => void;
   currentFullName: string;
+  currentReceiveAlerts: boolean;
 }
 
 export default function EditProfileModal({
@@ -14,8 +15,10 @@ export default function EditProfileModal({
   onClose,
   onSaved,
   currentFullName,
+  currentReceiveAlerts,
 }: EditProfileModalProps) {
   const [fullName, setFullName] = useState(currentFullName);
+  const [receiveAlerts, setReceiveAlerts] = useState(currentReceiveAlerts);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isClosing, setIsClosing] = useState(false);
@@ -24,9 +27,10 @@ export default function EditProfileModal({
   useEffect(() => {
     if (isOpen) {
       setFullName(currentFullName);
+      setReceiveAlerts(currentReceiveAlerts);
       setError(null);
     }
-  }, [isOpen, currentFullName]);
+  }, [isOpen, currentFullName, currentReceiveAlerts]);
 
   const handleClose = () => {
     if (isLoading) return;
@@ -49,7 +53,7 @@ export default function EditProfileModal({
     setError(null);
 
     try {
-      const response = await apiService.updateProfile({ fullName: trimmed });
+      const response = await apiService.updateProfile({ fullName: trimmed, receiveAlerts });
 
       if (response.success) {
         setIsLoading(false);
@@ -121,6 +125,20 @@ export default function EditProfileModal({
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500 transition-colors"
               placeholder="Tu nombre completo"
             />
+          </div>
+
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="receiveAlerts"
+              checked={receiveAlerts}
+              onChange={(e) => setReceiveAlerts(e.target.checked)}
+              disabled={isLoading}
+              className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
+            />
+            <label htmlFor="receiveAlerts" className="text-sm text-gray-700">
+              Recibir alertas por email sobre vencimientos de guías
+            </label>
           </div>
         </div>
 

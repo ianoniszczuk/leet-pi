@@ -19,6 +19,9 @@ export class User {
   @Column({ name: 'enabled', type: 'boolean', default: false })
   enabled!: boolean;
 
+  @Column({ name: 'receive_alerts', type: 'boolean', default: true })
+  receiveAlerts!: boolean;
+
   @OneToMany(() => Submission, (submission) => submission.user)
   submissions!: Submission[];
 

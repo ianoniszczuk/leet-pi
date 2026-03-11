@@ -125,6 +125,7 @@ export default function UserProfile() {
         onClose={() => setIsEditModalOpen(false)}
         onSaved={refetchProfile}
         currentFullName={userProfile?.fullName ?? ''}
+        currentReceiveAlerts={userProfile?.receiveAlerts ?? true}
       />
     </ProtectedRoute>
   );

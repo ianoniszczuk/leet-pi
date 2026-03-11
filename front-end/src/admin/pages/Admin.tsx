@@ -5,9 +5,10 @@ import GuidesTab from '@/admin/components/GuidesTab';
 import UsersTab from '@/admin/components/UsersTab';
 import ActivityTab from '@/admin/components/ActivityTab';
 import SettingsTab from '@/admin/components/SettingsTab';
+import TestsTab from '@/admin/components/TestsTab';
 import PageHeader from '@/shared/components/PageHeader';
 
-type Tab = 'users' | 'guides' | 'activity' | 'settings';
+type Tab = 'users' | 'guides' | 'activity' | 'settings' | 'tests';
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState<Tab>('users');
@@ -29,6 +30,7 @@ export default function Admin() {
         {activeTab === 'users' && <UsersTab currentUserRoles={currentUserRoles} />}
         {activeTab === 'activity' && <ActivityTab />}
         {activeTab === 'settings' && <SettingsTab />}
+        {activeTab === 'tests' && <TestsTab currentUserEmail={currentUser?.email ?? ''} />}
       </div>
     </div>
   );

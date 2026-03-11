@@ -7,6 +7,7 @@ import config from '@/config/config.ts'
 import routes from '@/routes/index.ts'
 import { errorHandler } from '@/middleware/errorHandler.ts'
 import { printAuth0Config } from './utils/authTest.ts'
+import cronService from '@/services/cronService.ts'
 import swaggerUi from 'swagger-ui-express'
 import YAML from 'yamljs'
 import path from 'path'
@@ -60,6 +61,8 @@ const start = async () => {
 
     // Validar configuración de Auth0
     printAuth0Config();
+
+    cronService.start();
 
     const PORT = config.server.port;
     app.listen(PORT, () => {

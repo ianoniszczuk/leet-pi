@@ -8,9 +8,13 @@ import { UserRoles } from '../entities/user-roles.entity.ts';
 import { Roles } from '../entities/roles.enum.ts';
 import { Guide } from '../entities/guide.entity.ts';
 import { Exercise } from '../entities/exercise.entity.ts';
+import { User } from '../entities/user.entity.ts';
 import { Try } from '../entities/try.view.ts';
 import { Submission } from '../entities/submission.entity.ts';
+import { AppSetting } from '../entities/appSetting.entity.ts';
+import { EmailSchedule, EmailType } from '../entities/email-schedule.entity.ts';
 import codeJudgeService from '../services/codeJudgeService.ts';
+import emailService from '../services/emailService.ts';
 import logger from '../middleware/logger.ts';
 
 function parsePositiveInt(value: unknown): number | null {
@@ -24,6 +28,43 @@ function rejectBadGuideNumber(res: Response): void {
 
 function rejectBadExerciseNumber(res: Response): void {
   res.status(400).json(formatErrorResponse('Exercise number must be a positive integer', 400));
+}
+
+async function handleGuideEmailSchedule(savedGuide: Guide): Promise<void> {
+  const settingsRepo = AppDataSource.getRepository(AppSetting);
+  const emailScheduleRepo = AppDataSource.getRepository(EmailSchedule);
+  const guideRepo = AppDataSource.getRepository(Guide);
+
+  const [alertSetting, periodSetting] = await Promise.all([
+    settingsRepo.findOne({ where: { key: 'guideAlertEnabled' } }),
+    settingsRepo.findOne({ where: { key: 'guideAlertPeriodBeforeSend' } }),
+  ]);
+
+  const alertEnabled = alertSetting?.value === 'true';
+  const periodDays = parseInt(periodSetting?.value ?? '3');
+
+  if (alertEnabled && savedGuide.deadline) {
+    const alertDate = new Date(savedGuide.deadline);
+    alertDate.setDate(alertDate.getDate() - periodDays);
+    alertDate.setHours(0, 0, 0, 0);
+
+    if (!savedGuide.pendingEmailScheduleId) {
+      const schedule = await emailScheduleRepo.save({
+        email: EmailType.GUIDE_DEADLINE_ALERT,
+        date: alertDate,
+        isSent: false,
+      });
+      savedGuide.pendingEmailScheduleId = schedule.id;
+      await guideRepo.save(savedGuide);
+    } else {
+      await emailScheduleRepo.update(savedGuide.pendingEmailScheduleId, { date: alertDate });
+    }
+  } else if (savedGuide.pendingEmailScheduleId) {
+    const scheduleIdToDelete = savedGuide.pendingEmailScheduleId;
+    savedGuide.pendingEmailScheduleId = null;
+    await guideRepo.save(savedGuide);
+    await emailScheduleRepo.delete(scheduleIdToDelete);
+  }
 }
 
 export class AdminController {
@@ -353,6 +394,8 @@ export class AdminController {
 
       const savedGuide = await guideRepository.save(guide);
 
+      await handleGuideEmailSchedule(savedGuide);
+
       res.status(201).json(formatSuccessResponse({
         guideNumber: savedGuide.guideNumber,
         enabled: savedGuide.enabled,
@@ -409,6 +452,8 @@ export class AdminController {
       if (parsedDeadline !== undefined) guide.deadline = parsedDeadline;
 
       const savedGuide = await guideRepository.save(guide);
+
+      await handleGuideEmailSchedule(savedGuide);
 
       res.status(200).json(formatSuccessResponse({
         guideNumber: savedGuide.guideNumber,
@@ -752,6 +797,68 @@ export class AdminController {
     } catch (error) {
       logger.error('Error deleting test file:', error);
       res.status(500).json(formatErrorResponse('Internal server error', 500));
+    }
+  }
+
+  /**
+   * Envía un email de prueba de alerta de deadline al email indicado
+   */
+  async testSendDeadlineAlert(req: Request, res: Response): Promise<void> {
+    const { email } = req.body ?? {};
+
+    if (typeof email !== 'string' || email.trim() === '') {
+      res.status(400).json(formatErrorResponse('email must be a non-empty string', 400));
+      return;
+    }
+
+    try {
+      const guideRepository = AppDataSource.getRepository(Guide);
+      const exerciseRepository = AppDataSource.getRepository(Exercise);
+      const userRepository = AppDataSource.getRepository(User);
+
+      // Buscar primera guía con deadline y al menos 1 ejercicio habilitado
+      const guides = await guideRepository.find({ order: { guideNumber: 'ASC' } });
+      let targetGuide: Guide | null = null;
+      let enabledExercises: Exercise[] = [];
+
+      for (const guide of guides) {
+        if (!guide.deadline) continue;
+        const exercises = await exerciseRepository.find({
+          where: { guideNumber: guide.guideNumber, enabled: true },
+          order: { exerciseNumber: 'ASC' },
+        });
+        if (exercises.length > 0) {
+          targetGuide = guide;
+          enabledExercises = exercises;
+          break;
+        }
+      }
+
+      if (!targetGuide) {
+        res.status(404).json(formatErrorResponse('No guides with deadline and enabled exercises found', 404));
+        return;
+      }
+
+      const deadlineStr = new Date(targetGuide.deadline!).toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
+
+      const user = await userRepository.findOne({ where: { email: email.trim() } });
+      const mailTarget = user ?? { email: email.trim(), fullName: null };
+
+      await emailService.sendAlertMailToUser(mailTarget, targetGuide, enabledExercises, deadlineStr);
+      logger.info(`AdminController: test alert sent to ${email} for guide ${targetGuide.guideNumber}`);
+
+      res.status(200).json(formatSuccessResponse(
+        { sentTo: email.trim(), guideNumber: targetGuide.guideNumber },
+        'Test alert sent successfully',
+      ));
+    } catch (error: any) {
+      const msg = error?.message ?? 'Unknown error';
+      logger.error('Error sending test deadline alert:', msg);
+      res.status(500).json(formatErrorResponse(`Failed to send email: ${msg}`, 500));
     }
   }
 

@@ -104,7 +104,7 @@ class ApiService {
     return response.data;
   }
 
-  async updateProfile(data: { fullName: string }): Promise<ApiResponse<UserProfile>> {
+  async updateProfile(data: { fullName?: string; receiveAlerts?: boolean }): Promise<ApiResponse<UserProfile>> {
     const response = await this.api.patch(API_ENDPOINTS.users.updateMe, data);
     return response.data;
   }
@@ -351,6 +351,12 @@ class ApiService {
       CACHE_KEYS.metricsCompletionMatrix,
       API_ENDPOINTS.admin.metrics.completionMatrix,
     );
+  }
+
+  // Test endpoints
+  async testSendDeadlineAlert(email: string): Promise<ApiResponse<{ sentTo: string; guideNumber: number; skipped?: boolean }>> {
+    const response = await this.api.post(API_ENDPOINTS.admin.testSendDeadlineAlert, { email });
+    return response.data;
   }
 
   // Settings endpoints
