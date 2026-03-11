@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiService } from '@/shared/services/api';
+import { cacheService } from '@/shared/services/cacheService';
+import { CACHE_KEYS, CACHE_CONFIG } from '@/shared/config/cache';
 import type { AppSetting } from '@/shared/types';
 
 const SETTING_LABELS: Record<string, string> = {
@@ -77,10 +79,19 @@ export default function SettingsTab() {
   const fetchSettings = useCallback(async () => {
     setLoading(true);
     setError(null);
+
+    const cached = cacheService.get<AppSetting[]>(CACHE_KEYS.adminSettings);
+    if (cached) {
+      setSettings(cached);
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await apiService.getAllSettings();
       if (res.success && res.data) {
         setSettings(res.data);
+        cacheService.set(CACHE_KEYS.adminSettings, res.data, CACHE_CONFIG.adminSettings);
       } else {
         setError(res.error?.message ?? 'Error al cargar configuración');
       }
@@ -97,6 +108,8 @@ export default function SettingsTab() {
     const res = await apiService.updateSetting(key, value);
     if (!res.success) throw new Error(res.error?.message ?? 'Error al guardar');
     setSettings(prev => prev.map(s => s.key === key ? { ...s, value } : s));
+    cacheService.invalidate(CACHE_KEYS.adminSettings);
+    cacheService.invalidate(CACHE_KEYS.publicSettings);
   };
 
   if (loading) {

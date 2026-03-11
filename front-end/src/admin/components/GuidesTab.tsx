@@ -1,449 +1,16 @@
-import { useState, useEffect, useRef } from 'react';
-import {
-  ChevronDown, ChevronRight, Plus, Pencil, Trash2, Loader2, AlertCircle, Upload, Download, FileX,
-} from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Loader2, AlertCircle } from 'lucide-react';
 import { apiService } from '@/shared/services/api';
 import { cacheService } from '@/shared/services/cacheService';
-import { CACHE_KEYS } from '@/shared/config/cache';
+import { CACHE_KEYS, CACHE_CONFIG } from '@/shared/config/cache';
 import ConfirmDeleteModal from '@/shared/components/ConfirmDeleteModal';
+import GuideModal from './guides/GuideModal';
+import ExerciseModal from './guides/ExerciseModal';
+import EditExerciseModal from './guides/EditExerciseModal';
+import GuideRow from './guides/GuideRow';
+import type { GuideRowHandlers } from './guides/GuideRow';
+import type { GuideFormData } from './guides/GuideModal';
 import type { AdminGuide, AdminExercise } from '@/admin/types';
-
-// ─── Shared sub-components ────────────────────────────────────────────────────
-
-interface ModalFooterProps {
-  onCancel: () => void;
-  loading: boolean;
-  confirmLabel: string;
-}
-
-function ModalFooter({ onCancel, loading, confirmLabel }: ModalFooterProps) {
-  return (
-    <div className="flex gap-3 justify-end pt-2">
-      <button type="button" onClick={onCancel} disabled={loading}
-        className="px-4 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
-        Cancelar
-      </button>
-      <button type="submit" disabled={loading}
-        className="px-4 py-2 text-sm text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors flex items-center gap-2">
-        {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-        {confirmLabel}
-      </button>
-    </div>
-  );
-}
-
-// ─── Modals ───────────────────────────────────────────────────────────────────
-
-interface GuideFormData {
-  guideNumber?: number;
-  deadline: string | null;
-}
-
-interface GuideModalProps {
-  initial?: AdminGuide;
-  onSave: (data: GuideFormData) => Promise<void>;
-  onCancel: () => void;
-  loading: boolean;
-}
-
-function GuideModal({ initial, onSave, onCancel, loading }: GuideModalProps) {
-  const [guideNumber, setGuideNumber] = useState(initial?.guideNumber?.toString() ?? '');
-  const [deadline, setDeadline] = useState(
-    initial?.deadline ? new Date(initial.deadline).toLocaleDateString('en-CA') : ''
-  );
-  const isEdit = !!initial;
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave({
-      ...(isEdit ? {} : { guideNumber: Number(guideNumber) }),
-      deadline: deadline ? (() => { const [y, m, d] = deadline.split('-').map(Number); return new Date(y, m - 1, d, 23, 59, 59).toISOString(); })() : null,
-    });
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full mx-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          {isEdit ? `Editar Guía ${initial.guideNumber}` : 'Nueva Guía'}
-        </h3>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {!isEdit && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Número de guía</label>
-              <input type="number" min="1" required value={guideNumber}
-                onChange={e => setGuideNumber(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
-            </div>
-          )}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Deadline (opcional)</label>
-            <div className="flex gap-2">
-              <input type="date" value={deadline} onChange={e => setDeadline(e.target.value)}
-                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
-              {deadline && (
-                <button type="button" onClick={() => setDeadline('')}
-                  className="text-xs text-gray-500 hover:text-red-600 px-2">
-                  Limpiar
-                </button>
-              )}
-            </div>
-          </div>
-          <ModalFooter onCancel={onCancel} loading={loading} confirmLabel={isEdit ? 'Guardar' : 'Crear'} />
-        </form>
-      </div>
-    </div>
-  );
-}
-
-// ─── TestFileInput ─────────────────────────────────────────────────────────────
-
-interface TestFileInputProps {
-  hasTestFile: boolean;
-  onUpload: (file: File) => void;
-  onDelete: () => void;
-  onDownload: () => void;
-  loading: boolean;
-}
-
-function TestFileInput({ hasTestFile, onUpload, onDelete, onDownload, loading }: TestFileInputProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [fileError, setFileError] = useState<string | null>(null);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.name.toLowerCase().endsWith('.c')) {
-      setFileError('Solo se permiten archivos .c');
-      e.target.value = '';
-      return;
-    }
-    setFileError(null);
-    onUpload(file);
-    e.target.value = '';
-  };
-
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Archivo de test (.c)</label>
-      <div className="flex items-center gap-2 flex-wrap">
-        {hasTestFile ? (
-          <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-            Archivo cargado
-          </span>
-        ) : (
-          <span className="text-xs text-gray-400">Sin archivo</span>
-        )}
-        <button
-          type="button"
-          disabled={loading}
-          onClick={() => inputRef.current?.click()}
-          className="flex items-center gap-1 text-xs px-2 py-1 border border-gray-300 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors">
-          <Upload className="w-3 h-3" />
-          {hasTestFile ? 'Reemplazar' : 'Subir archivo'}
-        </button>
-        {hasTestFile && (
-          <>
-            <button
-              type="button"
-              disabled={loading}
-              onClick={onDownload}
-              className="flex items-center gap-1 text-xs px-2 py-1 border border-gray-300 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors">
-              <Download className="w-3 h-3" />
-              Descargar
-            </button>
-            <button
-              type="button"
-              disabled={loading}
-              onClick={onDelete}
-              className="flex items-center gap-1 text-xs px-2 py-1 border border-red-200 rounded-lg hover:bg-red-50 text-red-500 transition-colors">
-              <FileX className="w-3 h-3" />
-              Eliminar
-            </button>
-          </>
-        )}
-        <input ref={inputRef} type="file" accept=".c" className="hidden" onChange={handleFileChange} />
-      </div>
-      {fileError && <p className="text-xs text-red-500 mt-1">{fileError}</p>}
-    </div>
-  );
-}
-
-// ─── Modals ───────────────────────────────────────────────────────────────────
-
-interface ExerciseModalProps {
-  guideNumber: number;
-  onSave: (data: { exerciseNumber: number; enabled: boolean; functionSignature?: string | null }, testFile: File | null) => Promise<void>;
-  onCancel: () => void;
-  loading: boolean;
-}
-
-function ExerciseModal({ guideNumber, onSave, onCancel, loading }: ExerciseModalProps) {
-  const [exerciseNumber, setExerciseNumber] = useState('');
-  const [functionSignature, setFunctionSignature] = useState('');
-  const [pendingTestFile, setPendingTestFile] = useState<File | null>(null);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave({
-      exerciseNumber: Number(exerciseNumber),
-      enabled: false,
-      functionSignature: functionSignature.trim() || null,
-    }, pendingTestFile);
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Nuevo Ejercicio — Guía {guideNumber}</h3>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Número de ejercicio</label>
-            <input type="number" min="1" required value={exerciseNumber}
-              onChange={e => setExerciseNumber(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Firma de función (opcional)</label>
-            <textarea
-              value={functionSignature}
-              onChange={e => setFunctionSignature(e.target.value)}
-              placeholder="int sum(int a, int b)"
-              rows={2}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
-            <p className="text-xs text-gray-400 mt-1">Se mostrará como plantilla inicial en el editor para los alumnos.</p>
-          </div>
-          <TestFileInput
-            hasTestFile={false}
-            onUpload={f => setPendingTestFile(f)}
-            onDelete={() => { }}
-            onDownload={() => { }}
-            loading={loading}
-          />
-          {pendingTestFile && (
-            <p className="text-xs text-green-600 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
-              Archivo seleccionado: {pendingTestFile.name}
-              <button type="button" onClick={() => setPendingTestFile(null)} className="ml-1 text-gray-400 hover:text-red-500">✕</button>
-            </p>
-          )}
-          <ModalFooter onCancel={onCancel} loading={loading} confirmLabel="Crear" />
-        </form>
-      </div>
-    </div>
-  );
-}
-
-interface EditExerciseModalProps {
-  exercise: AdminExercise;
-  onSave: (data: { functionSignature: string | null }, pendingTestFile: File | null, pendingDelete: boolean) => Promise<void>;
-  onDownloadTestFile: () => void;
-  onCancel: () => void;
-  loading: boolean;
-}
-
-function EditExerciseModal({ exercise, onSave, onDownloadTestFile, onCancel, loading }: EditExerciseModalProps) {
-  const [functionSignature, setFunctionSignature] = useState(exercise.functionSignature ?? '');
-  const [pendingTestFile, setPendingTestFile] = useState<File | null>(null);
-  const [pendingDelete, setPendingDelete] = useState(false);
-
-  const effectiveHasTestFile = pendingDelete ? false : (pendingTestFile !== null || (exercise.hasTestFile ?? false));
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave({ functionSignature: functionSignature.trim() || null }, pendingTestFile, pendingDelete);
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Editar Ejercicio {exercise.exerciseNumber} — Guía {exercise.guideNumber}
-        </h3>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Firma de función</label>
-            <textarea
-              value={functionSignature}
-              onChange={e => setFunctionSignature(e.target.value)}
-              placeholder="int sum(int a, int b)"
-              rows={2}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
-            <p className="text-xs text-gray-400 mt-1">Se mostrará como plantilla inicial en el editor. Dejar vacío para usar Hello World.</p>
-          </div>
-          <TestFileInput
-            hasTestFile={effectiveHasTestFile}
-            onUpload={f => { setPendingTestFile(f); setPendingDelete(false); }}
-            onDelete={() => { setPendingDelete(true); setPendingTestFile(null); }}
-            onDownload={onDownloadTestFile}
-            loading={loading}
-          />
-          {pendingTestFile && (
-            <p className="text-xs text-green-600 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
-              Archivo seleccionado: {pendingTestFile.name}
-            </p>
-          )}
-          {pendingDelete && (
-            <p className="text-xs text-red-500">El archivo de test se eliminará al guardar.</p>
-          )}
-          <ModalFooter onCancel={onCancel} loading={loading} confirmLabel="Guardar" />
-        </form>
-      </div>
-    </div>
-  );
-}
-
-// ─── Exercise row ─────────────────────────────────────────────────────────────
-
-interface ExerciseRowProps {
-  exercise: AdminExercise;
-  onToggle: (e: AdminExercise) => Promise<void>;
-  onDelete: (e: AdminExercise) => void;
-  onEdit: (e: AdminExercise) => void;
-}
-
-function ExerciseRow({ exercise, onToggle, onDelete, onEdit }: ExerciseRowProps) {
-  const [toggling, setToggling] = useState(false);
-
-  const handleToggle = async () => {
-    setToggling(true);
-    await onToggle(exercise);
-    setToggling(false);
-  };
-
-  return (
-    <div className="flex items-center justify-between py-2 px-4 hover:bg-gray-50 rounded-lg">
-      <div className="flex items-center gap-3">
-        <span className={`inline-block w-2 h-2 rounded-full ${exercise.enabled ? 'bg-green-500' : 'bg-gray-400'}`} />
-        <span className="text-sm text-gray-700">Ejercicio {exercise.exerciseNumber}</span>
-        <span className={`text-xs px-2 py-0.5 rounded-full ${exercise.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-          {exercise.enabled ? 'Habilitado' : 'Deshabilitado'}
-        </span>
-        {exercise.functionSignature && (
-          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-mono" title={exercise.functionSignature}>
-            fn
-          </span>
-        )}
-        {exercise.hasTestFile && (
-          <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600" title="Tiene archivo de test">
-            test
-          </span>
-        )}
-      </div>
-      <div className="flex items-center gap-2">
-        <button onClick={handleToggle} disabled={toggling}
-          title={exercise.enabled ? 'Deshabilitar' : 'Habilitar'}
-          className="text-xs px-3 py-1 rounded-lg border border-gray-300 hover:bg-gray-100 text-gray-600 transition-colors flex items-center gap-1">
-          {toggling ? <Loader2 className="w-3 h-3 animate-spin" /> : (exercise.enabled ? '○ Deshabilitar' : '● Habilitar')}
-        </button>
-        <button onClick={() => onEdit(exercise)} title="Editar firma de función"
-          className="p-1 text-gray-400 hover:text-primary-600 transition-colors">
-          <Pencil className="w-4 h-4" />
-        </button>
-        <button onClick={() => onDelete(exercise)} title="Eliminar ejercicio"
-          className="p-1 text-red-400 hover:text-red-600 transition-colors">
-          <Trash2 className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ─── Guide row ────────────────────────────────────────────────────────────────
-
-interface GuideRowHandlers {
-  onEdit: (g: AdminGuide) => void;
-  onDelete: (g: AdminGuide) => void;
-  onToggle: (g: AdminGuide) => Promise<void>;
-  onToggleExercise: (g: AdminGuide, e: AdminExercise) => Promise<void>;
-  onDeleteExercise: (g: AdminGuide, e: AdminExercise) => void;
-  onEditExercise: (g: AdminGuide, e: AdminExercise) => void;
-  onAddExercise: (g: AdminGuide) => void;
-  onDownloadTestFile: (g: AdminGuide, e: AdminExercise) => void;
-}
-
-interface GuideRowProps {
-  guide: AdminGuide;
-  handlers: GuideRowHandlers;
-}
-
-function GuideRow({ guide, handlers }: GuideRowProps) {
-  const [expanded, setExpanded] = useState(false);
-  const [toggling, setToggling] = useState(false);
-
-  const deadlineLabel = guide.deadline
-    ? new Date(guide.deadline).toLocaleDateString('es-AR')
-    : 'Sin deadline';
-
-  const handleToggle = async () => {
-    setToggling(true);
-    await handlers.onToggle(guide);
-    setToggling(false);
-  };
-
-  return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden">
-      <div className="flex items-center justify-between p-4 bg-white hover:bg-gray-50">
-        <button onClick={() => setExpanded(x => !x)} className="flex items-center gap-3 flex-1 text-left">
-          {expanded ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
-          <span className="font-medium text-gray-900">Guía {guide.guideNumber}</span>
-          <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${guide.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${guide.enabled ? 'bg-green-500' : 'bg-gray-400'}`} />
-            {guide.enabled ? 'Habilitada' : 'Deshabilitada'}
-          </span>
-          <span className="text-xs text-gray-500">{deadlineLabel}</span>
-          <span className="text-xs text-gray-400">{guide.exercises.length} ejercicio(s)</span>
-        </button>
-        <div className="flex items-center gap-2 ml-4">
-          <button onClick={handleToggle} disabled={toggling}
-            title={guide.enabled ? 'Deshabilitar' : 'Habilitar'}
-            className="text-xs px-3 py-1 rounded-lg border border-gray-300 hover:bg-gray-100 text-gray-600 transition-colors flex items-center gap-1">
-            {toggling ? <Loader2 className="w-3 h-3 animate-spin" /> : (guide.enabled ? '○ Deshabilitar' : '● Habilitar')}
-          </button>
-          <button onClick={() => handlers.onEdit(guide)} title="Editar guía"
-            className="p-1.5 text-gray-400 hover:text-primary-600 transition-colors">
-            <Pencil className="w-4 h-4" />
-          </button>
-          <button onClick={() => handlers.onDelete(guide)} title="Eliminar guía"
-            className="p-1.5 text-gray-400 hover:text-red-600 transition-colors">
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      {expanded && (
-        <div className="border-t border-gray-100 bg-gray-50 p-3">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Ejercicios</span>
-            <button onClick={() => handlers.onAddExercise(guide)}
-              className="flex items-center gap-1 text-xs px-2 py-1 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
-              <Plus className="w-3 h-3" /> Nuevo Ejercicio
-            </button>
-          </div>
-          {guide.exercises.length === 0 ? (
-            <p className="text-xs text-gray-400 text-center py-4">Sin ejercicios</p>
-          ) : (
-            <div className="space-y-1">
-              {guide.exercises.map(ex => (
-                <ExerciseRow
-                  key={ex.exerciseNumber}
-                  exercise={ex}
-                  onToggle={e => handlers.onToggleExercise(guide, e)}
-                  onDelete={e => handlers.onDeleteExercise(guide, e)}
-                  onEdit={e => handlers.onEditExercise(guide, e)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Main component ───────────────────────────────────────────────────────────
 
 type DeleteTarget =
   | { type: 'guide'; guide: AdminGuide }
@@ -467,9 +34,23 @@ export default function GuidesTab() {
     try {
       if (!silent) setLoading(true);
       setError(null);
+
+      if (!silent) {
+        const cached = cacheService.get<AdminGuide[]>(CACHE_KEYS.adminGuides);
+        if (cached) {
+          setGuides(cached);
+          setLoading(false);
+          return;
+        }
+      }
+
       const res = await apiService.getAdminGuides();
-      if (res.success && res.data) setGuides(res.data);
-      else setError('Error al cargar las guías');
+      if (res.success && res.data) {
+        setGuides(res.data);
+        cacheService.set(CACHE_KEYS.adminGuides, res.data, CACHE_CONFIG.adminGuides);
+      } else {
+        setError('Error al cargar las guías');
+      }
     } catch {
       setError('Error al cargar las guías');
     } finally {
@@ -483,6 +64,7 @@ export default function GuidesTab() {
     setActionLoading(true);
     try {
       await fn();
+      cacheService.invalidate(CACHE_KEYS.adminGuides);
       await loadGuides(true);
       cacheService.invalidate(CACHE_KEYS.availableExercises);
     } catch (err: any) {
@@ -518,6 +100,7 @@ export default function GuidesTab() {
         }
       }
       await loadGuides(true);
+      cacheService.invalidate(CACHE_KEYS.adminGuides);
       cacheService.invalidate(CACHE_KEYS.availableExercises);
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Error al crear el ejercicio');
@@ -539,6 +122,7 @@ export default function GuidesTab() {
         await apiService.uploadExerciseTestFile(guideNumber, exerciseNumber, pendingTestFile);
       }
       await loadGuides(true);
+      cacheService.invalidate(CACHE_KEYS.adminGuides);
       cacheService.invalidate(CACHE_KEYS.availableExercises);
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Error al guardar el ejercicio');

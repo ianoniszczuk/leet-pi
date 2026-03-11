@@ -8,8 +8,11 @@ import ResultsPanel from '@/code/components/ResultsPanel';
 import { useSubmission } from '@/shared/hooks/useApi';
 import { useCachedAvailableExercises } from '@/shared/hooks/useCachedApi';
 import { apiService } from '@/shared/services/api';
+import { cacheService } from '@/shared/services/cacheService';
+import { CACHE_KEYS, CACHE_CONFIG } from '@/shared/config/cache';
 import logger from '@/shared/utils/logger';
 import type { SubmissionResponse } from '@/code/types';
+import type { AppSettings } from '@/shared/types';
 
 const DEFAULT_CODE = `#include <stdio.h>
 
@@ -48,10 +51,18 @@ export default function SubmitCode() {
   const { submitSolution, loading, error } = useSubmission();
   const { data: availableExercises, loading: exercisesLoading, error: exercisesError } = useCachedAvailableExercises();
 
-  // Fetch public settings (GitHub Issues URL)
+  // Fetch public settings (GitHub Issues URL) — con caché
   useEffect(() => {
+    const cached = cacheService.get<AppSettings>(CACHE_KEYS.publicSettings);
+    if (cached) {
+      setGithubIssuesUrl(cached.githubIssuesUrl);
+      return;
+    }
     apiService.getPublicSettings().then(res => {
-      if (res.success && res.data) setGithubIssuesUrl(res.data.githubIssuesUrl);
+      if (res.success && res.data) {
+        setGithubIssuesUrl(res.data.githubIssuesUrl);
+        cacheService.set(CACHE_KEYS.publicSettings, res.data, CACHE_CONFIG.publicSettings);
+      }
     }).catch(() => { /* silently ignore */ });
   }, []);
 
