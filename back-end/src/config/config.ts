@@ -25,6 +25,15 @@ const config = {
     issuer: process.env.AUTH0_ISSUER || "",
     jwksUri: process.env.AUTH0_JWKS_URI || "",
   },
+  mailer: {
+    host: process.env.MAILER_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.MAILER_PORT || '587'),
+    secure: process.env.MAILER_SECURE === 'true',
+    user: process.env.MAILER_USER || '',
+    pass: process.env.MAILER_PASS || '',
+    from: process.env.MAILER_FROM || '',
+  },
+  appUrl: process.env.APP_URL || 'http://localhost:8080',
   jwt: {
     accessSecret: process.env.API_JWT_SECRET || "",
     refreshSecret: process.env.API_REFRESH_SECRET || "",

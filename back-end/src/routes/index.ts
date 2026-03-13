@@ -3,6 +3,7 @@ import submissionRoutes from './submissionRoutes.ts'
 import userRoutes from './userRoutes.ts'
 import authRoutes from './authRoutes.ts'
 import adminRoutes from './adminRoutes.ts'
+import settingsController from '../controllers/settingsController.ts'
 
 const router = express.Router();
 
@@ -15,6 +16,9 @@ router.get('/health', (req, res) => {
     version: '1.0.0',
   });
 });
+
+// Public settings
+router.get('/settings', settingsController.getPublicSettings.bind(settingsController));
 
 // API routes
 router.use('/auth', authRoutes);

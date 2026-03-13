@@ -36,6 +36,7 @@ const adminEndpoints = {
   guide: (n?: number) => (n !== undefined ? `/admin/guides/${n}` : '/admin/guides'),
   exercise: (g: number, e?: number) => (e !== undefined ? `/admin/guides/${g}/exercises/${e}` : `/admin/guides/${g}/exercises`),
   exerciseTestFile: (g: number, e: number) => `/admin/guides/${g}/exercises/${e}/test-file`,
+  testSendDeadlineAlert: '/admin/test/send-deadline-alert',
   metrics: {
     progress: '/admin/metrics/progress',
     resolutionTime: '/admin/metrics/resolution-time',
@@ -49,10 +50,17 @@ const adminEndpoints = {
   },
 };
 
+const settingsEndpoints = {
+  public: '/settings',
+  adminAll: '/admin/settings',
+  adminUpdate: (key: string) => `/admin/settings/${key}`,
+};
+
 export const API_ENDPOINTS = {
   health: '/health',
   auth: authEndpoints,
   users: userEndpoints,
   submissions: submissionEndpoints,
   admin: adminEndpoints,
+  settings: settingsEndpoints,
 } as const;

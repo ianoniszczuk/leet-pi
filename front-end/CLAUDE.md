@@ -41,6 +41,8 @@ src/
 ├── App.tsx / main.tsx / index.css        # Root files
 ├── admin/                                # Admin panel feature
 │   ├── components/                       # Admin tabs, modals, dashboard charts
+│   │   ├── AdminTabBar.tsx               # [NEW] Tab bar component (extracted from Admin.tsx)
+│   │   └── ...
 │   ├── hooks/                            # useAdmin, useAcademicMetrics
 │   ├── pages/                            # Admin page
 │   └── types/                            # Admin-specific types (AdminUser, metrics, etc.)
@@ -51,18 +53,34 @@ src/
 │   ├── pages/                            # Login callback, Landing page
 │   └── types/                            # Auth0User, ProtectedRouteProps
 ├── profile/                              # User profile feature
-│   ├── components/                       # EditProfileModal
+│   ├── components/                       # EditProfileModal + sub-components:
+│   │   ├── UserInfoCard.tsx              # [NEW] Avatar, name, email, edit button
+│   │   ├── ExerciseStatsCard.tsx         # [NEW] Per-exercise success rate with progress bars
+│   │   ├── OverallStatsCard.tsx          # [NEW] Total/successful/failed counts + rate bar
+│   │   ├── RecentSubmissionsCard.tsx     # [NEW] Last N submissions with status icon
+│   │   └── QuickActionsCard.tsx          # [NEW] CTA buttons (Enviar / Ver envíos)
 │   ├── pages/                            # UserProfile page
 │   └── types/                            # UserProfile (extends User)
 ├── submissions/                          # Submission history feature
+│   ├── components/                       # [NEW] Submission sub-components:
+│   │   ├── SubmissionSummaryStats.tsx    # [NEW] 3 stat cards (total, exitosos, tasa)
+│   │   ├── SubmissionsList.tsx           # [NEW] Scrollable list of submission rows
+│   │   └── SubmissionDetailModal.tsx     # [NEW] Modal showing selected submission code
 │   ├── pages/                            # MySubmissions page
 │   └── types/                            # Submission type
 ├── code/                                 # Code editor & evaluation feature
-│   ├── components/                       # ResultsPanel, ExerciseRankings
+│   ├── components/                       # ResultsPanel, ExerciseRankings + [NEW]:
+│   │   ├── CodeEditor.tsx                # Monaco editor with header & submit/reset actions
+│   │   └── ExerciseSelector.tsx          # Guide & exercise dropdowns panel
 │   ├── pages/                            # SubmitCode page
 │   └── types/                            # SubmissionResponse, TestResult, ranking types
 └── shared/                               # Cross-feature shared code
-    ├── components/                       # Header, LoadingSpinner, SessionExpiredModal
+    ├── components/                       # Header, LoadingSpinner, SessionExpiredModal + [NEW]:
+    │   ├── PageHeader.tsx                # [NEW] h1 + optional subtitle reusable header
+    │   ├── StatCard.tsx                  # [NEW] Icon + label + value stat card
+    │   ├── StatusBadge.tsx               # [NEW] Exitoso/Fallido pill badge
+    │   ├── ConfirmDeleteModal.tsx        # [NEW] Generic delete confirmation modal
+    │   └── ErrorBanner.tsx              # [NEW] Red error banner with optional dismiss
     ├── config/                           # API config, cache config
     ├── hooks/                            # useApi, useCachedApi
     ├── services/                         # ApiService (singleton), CacheService

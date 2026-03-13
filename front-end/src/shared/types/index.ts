@@ -16,6 +16,7 @@ export interface User {
     sub: string;
     email: string;
     fullName: string | null;
+    receiveAlerts: boolean;
     enabled?: boolean;
     roles?: string[];
     submissions?: any[];
@@ -33,6 +34,16 @@ export interface Guide {
     guideNumber: number;
     enabled: boolean;
     exercises?: Exercise[];
+}
+
+// App Settings Types
+export interface AppSettings {
+    githubIssuesUrl: string | null;
+}
+
+export interface AppSetting {
+    key: string;
+    value: string | null;
 }
 
 // Available Exercises Types

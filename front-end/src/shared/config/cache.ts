@@ -14,6 +14,15 @@ export const CACHE_CONFIG = {
 
   // Admin Metrics - Aggregaciones costosas; no necesitan tiempo real
   metrics: 5 * 60 * 1000,              // 5 minutos
+
+  // Admin Guides - Cambian solo por acciones explícitas del admin
+  adminGuides: 5 * 60 * 1000,          // 5 minutos
+
+  // Admin Settings - Cambian raramente
+  adminSettings: 10 * 60 * 1000,       // 10 minutos
+
+  // Public Settings (GitHub URL, etc.) 
+  publicSettings: 30 * 60 * 1000,      // 30 minutos
 } as const;
 
 // Claves para identificar diferentes tipos de caché
@@ -36,6 +45,10 @@ export const CACHE_KEYS = {
   metricsProgressDistribution: 'metrics:progress-distribution',
   metricsWeeklyActivity: 'metrics:weekly-activity',
   metricsCompletionMatrix: 'metrics:completion-matrix',
+
+  adminGuides: 'admin:guides',
+  adminSettings: 'admin:settings',
+  publicSettings: 'settings:public',
 } as const;
 
 // Tipos para TypeScript
